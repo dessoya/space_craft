@@ -47,15 +47,15 @@ func Error(err *errors.Error) {
 }
 
 
-func Init() (err error) {
+func Init(path string) (err error) {
 
-    f_stdout, err = os.OpenFile("stdout.log",   os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+    f_stdout, err = os.OpenFile(path + "stdout.log",   os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 
     if err != nil {
     	return
     }
 
-    f_stderr, err = os.OpenFile("stderr.log",   os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+    f_stderr, err = os.OpenFile(path + "stderr.log",   os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 
     if err != nil {
     	return

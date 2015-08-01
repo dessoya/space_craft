@@ -11,6 +11,7 @@ import (
     "fmt"
 	"net/http"
 	"os"
+	"log"
 
 	"sc/logger"
 	"sc/errors"
@@ -37,19 +38,20 @@ func main() {
 
 	var err *errors.Error
 
-    logger.Init()
-    logger.String(fmt.Sprintf("started"))
-
     config, err = readConfig()
 
 	if err != nil {
 		// logger.Error(fmt.Sprintf("readConfig - %v", err))		
-		logger.Error(err)
+		log.Fatal(err)
 		// log.Fatal("ListenAndServe: ", err)
 		os.Exit(0)
 	}	
 
     // fmt.Printf("%+v\n", *config)
+
+    logger.Init(config.Logger.Path)
+    logger.String(fmt.Sprintf("started"))
+
 
 
 	cluster := gocql.NewCluster("192.168.88.102")
