@@ -21,6 +21,8 @@ import (
 	"sc/ws/connection/factory"
 	"github.com/gocql/gocql"
 
+	models_auth_session "sc/models/auth_session"
+
 	cmd_auth "sc/ws/commands/auth"
 )
 
@@ -59,6 +61,9 @@ func main() {
     cluster.Consistency = 1
 
     session, berr := cluster.CreateSession()
+
+
+    models_auth_session.Init(session)
 
 
 

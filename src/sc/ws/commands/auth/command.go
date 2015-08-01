@@ -12,41 +12,39 @@ import (
 	"sc/ws/command"
 	"sc/logger"
 	"sc/errors"
-	"fmt"
+	// "fmt"
+
+	model_auth_session "sc/models/auth_session"
 )
 
 type Command struct {
-	connection command.Connection
-	ctx *command.Context
+	connection		command.Connection
+	ctx				*command.Context
 }
 
 type CommandDetector struct {
-	SessionUUID string `json:"session_uuid"`
+	SessionUUID		string `json:"session_uuid"`
 }
 
 type SendCommandAuth struct {
-	Command string `json:"command"`
-	SessionUUID string `json:"session_uuid"`
+	Command			string `json:"command"`
+	SessionUUID		string `json:"session_uuid"`
 }
 
 func (c *Command) Execute(message []byte) {
 
 	var commandDetector CommandDetector
-
 	json.Unmarshal(message, &commandDetector)
-
-	logger.String(fmt.Sprintf("session_uuid: %+v", commandDetector.SessionUUID))
-
 	sessionUUID, err := gocql.ParseUUID(commandDetector.SessionUUID)
 	if err != nil {
-		// generate new session
-		logger.String("generate new session")
+		// logger.String("generate new session")
 		sessionUUID = gocql.TimeUUID()
 	}
 
-	logger.String(fmt.Sprintf("session_uuid: %+v", sessionUUID.String()))
+	session := model_auth_session.LoadOrCreateSession(sessionUUID)
+/*
+	var row = map[string]interface{}{}
 
-	var row map[string]interface{} = make(map[string]interface{})
 	var session_uuid = sessionUUID.String()
 
 	logger.String(fmt.Sprintf(`SELECT * FROM auth_sessions where session_uuid = %s`, session_uuid))
@@ -59,13 +57,13 @@ func (c *Command) Execute(message []byte) {
 	if row["session_uuid"] != sessionUUID {
 
 		logger.String("inserting session")
-		if err = c.ctx.CQLSession.Query(fmt.Sprintf(`insert into auth_sessions (session_uuid) values (%s)`, session_uuid)).Exec(); err != nil {
+		if err = c.ctx.CQLSession.Query(fmt.Sprintf(`insert into auth_sessions (session_uuid,last_access,create_time) values (%s,now(),now())`, session_uuid)).Exec(); err != nil {
 			logger.Error(errors.New(err))
 		}
 	}
+*/
 
-
-	sendCommandAuth := SendCommandAuth{ Command: "auth", SessionUUID: session_uuid }
+	sendCommandAuth := SendCommandAuth{ Command: "auth", SessionUUID: session.UUID.String() }
 	b, err := json.Marshal(sendCommandAuth)
 	if err != nil {
 		logger.Error(errors.New(err))
