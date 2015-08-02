@@ -7,11 +7,13 @@ import (
 	"time"
 	"fmt"
 	"encoding/json"
-	"io"
+	"io"	
 
 	"sc/logger"
 	"sc/errors"
 	"sc/ws/command"
+
+	model_auth_session "sc/models/auth_session"
 )
 
 const (
@@ -28,6 +30,9 @@ type Connection struct {
 	writeChannel	*WriteChannel
 	commands		map[string]command.Generator
 	commandContext	*command.Context
+
+	SessionExists	bool
+	Session			*model_auth_session.Session
 }
 
 type CommandDetector struct {
@@ -56,12 +61,27 @@ func New(
 		ws:				ws,
 		closeChannel:	closeChannel,
 		writeChannel:	writeChannel,
-		commandContext:	ctx,
+		commandContext:	ctx,		
+		SessionExists:	false,
 	}
 
 	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(PongWait)); return nil })
 
 	return &c
+}
+
+func timeWrapper(commandName string, command command.Command, message []byte) {
+	t := time.Now()
+
+	command.Execute(message)
+
+	d := time.Now().Sub(t)
+	logger.String(fmt.Sprintf("command '%s' time: %0.5f", commandName, float64(d) / float64(time.Second)))
+}
+
+func (c *Connection) SetSession (session *model_auth_session.Session) {
+	c.Session = session
+	c.SessionExists = true
 }
 
 func (c *Connection) Reading() {
@@ -87,13 +107,10 @@ func (c *Connection) Reading() {
 			continue
 		}
 
-		logger.String(fmt.Sprintf("message: %+v", commandDetector))
-		// c.Send(smessage)
-
 		generator, ok := c.commands[commandDetector.Command]
 		if ok {
 			command := generator(c, c.commandContext)
-			go command.Execute(message)
+			go timeWrapper(commandDetector.Command, command, message)
 		}
 	}
 
