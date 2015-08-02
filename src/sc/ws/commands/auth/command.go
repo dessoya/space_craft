@@ -28,6 +28,7 @@ type CommandDetector struct {
 type SendCommandAuth struct {
 	Command			string `json:"command"`
 	SessionUUID		string `json:"session_uuid"`
+	AuthMethods		[]string `json:"auth_methods"`
 }
 
 func (c *Command) Execute(message []byte) {
@@ -37,7 +38,12 @@ func (c *Command) Execute(message []byte) {
 
 	session := model_auth_session.LoadOrCreateSession(commandDetector.SessionUUID)
 
-	sendCommandAuth := SendCommandAuth{ Command: "auth", SessionUUID: session.UUID.String() }
+	sendCommandAuth := SendCommandAuth{
+		Command:			"auth",
+		SessionUUID:		session.UUID.String(),
+		AuthMethods:		c.ctx.Config.Auth.Methods,
+	}
+
 	b, err := json.Marshal(sendCommandAuth)
 	if err != nil {
 		logger.Error(errors.New(err))

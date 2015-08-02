@@ -20,6 +20,7 @@ import (
 	"sc/ws/connection"
 	"sc/ws/connection/factory"
 	"github.com/gocql/gocql"
+	module_config "sc/config"
 
 	models_auth_session "sc/models/auth_session"
 
@@ -31,7 +32,7 @@ func goroutines() interface{} {
 }
 
 
-var config *Config
+var config *module_config.Config
 
 func main() {
 
@@ -72,7 +73,7 @@ func main() {
 	connectionFactory.InstallCommand("auth", cmd_auth.Generator)
 
 
-	commandContext := &command.Context{ CQLSession: session }
+	commandContext := &command.Context{ CQLSession: session, Config: config }
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 

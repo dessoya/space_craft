@@ -1,5 +1,9 @@
 {
 	"http": {
 		"port": 9400
+	},
+
+	"auth": {
+		"method": [ "fake" ]
 	}
 }

@@ -8,54 +8,40 @@ import (
 	// "fmt"
 
 	"sc/errors"
+	module_config "sc/config"
 )
 
-type ConfigHTTP struct {
-	Port uint16 `json:"port"`
-}
-
-type ConfigLogger struct {
-	Path string `json:"path"`
-}
-
-type Config struct {
-	Http ConfigHTTP			`json:"http"`
-	Logger ConfigLogger		`json:"logger"`
-}
-
-var defaultConfig Config = Config{
-	Logger: ConfigLogger {
+var defaultConfig = module_config.Config{
+	Logger: module_config.ConfigLogger {
 		Path: "",
 	},	
-	Http: ConfigHTTP {
+	Http: module_config.ConfigHTTP {
 		Port: 9400,
+	},
+	Auth: module_config.ConfigAuth {
+		Methods: []string{"fake"},
 	},
 }
 
-func readConfig() (*Config, *errors.Error) {
+func readConfig() (*module_config.Config, *errors.Error) {
 
 	data, err := ioutil.ReadFile("config.json")
-
-	// fmt.Printf("%+v\n", data)
 
 	if err != nil {
 		return &defaultConfig, errors.New(err)
 	}
 
 	err = json.Unmarshal(data, &defaultConfig)
-	// fmt.Printf("%+v\n", defaultConfig)
 
 	if err != nil {
 		return &defaultConfig, errors.New(err)
 	}
 
 	data, err = ioutil.ReadFile("local.config.json")
-	// fmt.Printf("%+v\n", data)
 
 	if err == nil {
 
 		err = json.Unmarshal(data, &defaultConfig)
-		// fmt.Printf("%+v\n", defaultConfig)
 
 		if err != nil {
 			return &defaultConfig, errors.New(err)
