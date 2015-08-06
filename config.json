@@ -4,6 +4,6 @@
 	},
 
 	"auth": {
-		"method": [ "fake" ]
+		"methods": [ "fake", "fake2" ]
 	}
 }

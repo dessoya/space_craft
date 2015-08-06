@@ -4,9 +4,12 @@ package auth_session
 import (
 	"github.com/gocql/gocql"
 	"fmt"
+	"strings"
 
 	"sc/errors"
 	"sc/logger"
+
+	// model_user "sc/models/user"
 )
 
 var CQLSession *gocql.Session
@@ -18,6 +21,8 @@ func Init(session_ *gocql.Session) {
 type Session struct {
 	UUID		gocql.UUID
 	Exists		bool
+	IsAuth		bool
+	UserUUID	gocql.UUID
 }
 
 func (s *Session) Load() {
@@ -77,4 +82,33 @@ func LoadOrCreateSession(uuid string) *Session {
 	}
 
 	return s
+}
+
+func (s *Session) Update(fields map[string]interface{}) error {
+
+	pairs := []string{}
+
+	for key, value := range fields {
+		var pair string = key + " = "
+		switch t := value.(type) {
+		case bool:
+			pair += fmt.Sprintf("%v", t)
+		case string:
+			pair += "'" + t + "'"
+		case gocql.UUID:
+			pair += t.String()
+		default:
+			logger.Error(errors.New(fmt.Sprintf("unknown type: %+v",t)))
+		}
+		pairs = append(pairs, pair)
+	}
+
+	q := "update auth_sessions set " + strings.Join(pairs, ",") + " where session_uuid = " + s.UUID.String()
+
+	if err := CQLSession.Query(q).Exec(); err != nil {	
+		logger.Error(errors.New(err))
+		return err
+	}
+
+	return nil
 }
