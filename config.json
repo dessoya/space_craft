@@ -4,6 +4,6 @@
 	},
 
 	"auth": {
-		"methods": [ "fake", "fake2" ]
+		"methods": [ "fake", "google", "vk", "facebook" ]
 	}
 }

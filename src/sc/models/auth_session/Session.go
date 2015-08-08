@@ -38,6 +38,9 @@ func (s *Session) Load() {
 		return
 	}
 
+	s.IsAuth = row["is_auth"].(bool)
+	s.UserUUID = row["user_uuid"].(gocql.UUID)
+
 	s.Exists = true
 
 }
@@ -91,10 +94,14 @@ func (s *Session) Update(fields map[string]interface{}) error {
 	for key, value := range fields {
 		var pair string = key + " = "
 		switch t := value.(type) {
+		case nil:
+			pair += "null"
 		case bool:
 			pair += fmt.Sprintf("%v", t)
 		case string:
 			pair += "'" + t + "'"
+		case *gocql.UUID:
+			pair += t.String()
 		case gocql.UUID:
 			pair += t.String()
 		default:

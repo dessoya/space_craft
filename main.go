@@ -27,6 +27,7 @@ import (
 	model_user "sc/models/user"
 
 	cmd_auth "sc/ws/commands/auth"
+	cmd_logout "sc/ws/commands/logout"
 )
 
 func goroutines() interface{} {
@@ -74,6 +75,7 @@ func main() {
 	var connectionFactory = factory.New()
 
 	connectionFactory.InstallCommand("auth", cmd_auth.Generator)
+	connectionFactory.InstallCommand("logout", cmd_logout.Generator)
 
 
 	commandContext := &command.Context{ CQLSession: session, Config: config }
@@ -154,6 +156,11 @@ func main() {
 			// check for another user and relogin
 			if user.Exists && user.UUID.String() != session.UserUUID.String() {
 
+				m := r.URL.Query().Get("method") + "_uuid"
+				user.Update(map[string]interface{}{
+					m: methodUUID,
+				})
+
 				session.Update(map[string]interface{}{
 					"user_uuid": user.UUID,
 					"auth_method": r.URL.Query().Get("method"),
@@ -168,24 +175,22 @@ func main() {
 
 
 		} else {
-		
+
 			// loging
 			if !user.Exists {
 				user.Create()
 				m := r.URL.Query().Get("method") + "_uuid"
 				user.Update(map[string]interface{}{
 					"username": r.URL.Query().Get("username"),
-					m: *methodUUID,
+					m: methodUUID,
 				})
-
-				session.Update(map[string]interface{}{
-					"is_auth": true,
-					"user_uuid": user.UUID,
-					"auth_method": r.URL.Query().Get("method"),
-				})
-
 			}
-			
+
+			session.Update(map[string]interface{}{
+				"is_auth": true,
+				"user_uuid": user.UUID,
+				"auth_method": r.URL.Query().Get("method"),
+			})
 		}
 
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)

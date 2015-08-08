@@ -14,6 +14,7 @@ import (
 	"sc/errors"
 
 	model_auth_session "sc/models/auth_session"
+	model_user "sc/models/user"	
 )
 
 type Command struct {
@@ -25,10 +26,16 @@ type CommandDetector struct {
 	SessionUUID		string `json:"session_uuid"`
 }
 
+type SendCommandAuthUser struct {
+	Name		string		`json:"name"`
+}
+
 type SendCommandAuth struct {
-	Command			string `json:"command"`
-	SessionUUID		string `json:"session_uuid"`
-	AuthMethods		[]string `json:"auth_methods"`
+	Command			string		`json:"command"`
+	SessionUUID		string		`json:"session_uuid"`
+	IsAuth			bool		`json:"is_auth"`
+	AuthMethods		[]string	`json:"auth_methods"`
+	User			SendCommandAuthUser `json:"user"`
 }
 
 func (c *Command) Execute(message []byte) {
@@ -42,6 +49,16 @@ func (c *Command) Execute(message []byte) {
 		Command:			"auth",
 		SessionUUID:		session.UUID.String(),
 		AuthMethods:		c.ctx.Config.Auth.Methods,
+		IsAuth:				session.IsAuth,
+	}
+
+	if session.IsAuth {
+		user := model_user.New(session.UserUUID)
+		if user.Exists {
+			sendCommandAuth.User = SendCommandAuthUser{
+				Name: user.Name,
+			}
+		}
 	}
 
 	b, err := json.Marshal(sendCommandAuth)
