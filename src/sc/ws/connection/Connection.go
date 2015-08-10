@@ -14,6 +14,7 @@ import (
 	"sc/ws/command"
 
 	model_auth_session "sc/models/auth_session"
+	"sc/model"
 )
 
 const (
@@ -50,6 +51,9 @@ type WriteMessage struct {
 }
 
 type WriteChannel chan *WriteMessage
+
+
+var connectionBySessionUUID map[string]*Connection = map[string]*Connection{}
 
 
 func New(
@@ -97,8 +101,28 @@ func (c *Connection) GetServerAuthState () bool {
 	return c.IsServerAuth
 }
 
+func GetConnectionBySessionUUID(sessionUUID string) *Connection {
+	c, ok := connectionBySessionUUID[sessionUUID]
+	if ok {
+		return c
+	}
+	return nil
+}
+
+func (c *Connection) GetSession () *model_auth_session.Session {
+
+	if c.SessionExists {
+		return c.Session
+	}
+
+	return nil
+}
 
 func (c *Connection) SetSession (session *model_auth_session.Session) {
+
+	// todo: lock
+	connectionBySessionUUID[session.UUID.String()] = c
+
 	c.Session = session
 	c.SessionExists = true
 }
@@ -111,7 +135,7 @@ func (c *Connection) Reading() {
 	for {
 		_, message, err := c.ws.ReadMessage()
 		if err != nil {
-			if err != io.EOF {
+			if err != io.EOF && err.Error() != "websocket: close 1005 " {
 				logger.Error(errors.New(err))
 			}
 			break
@@ -137,6 +161,14 @@ func (c *Connection) Reading() {
 			command := generator(c, c.commandContext)
 			go timeWrapper(commandDetector.Command, command, message)
 		}
+	}
+
+	if c.SessionExists {
+		delete(connectionBySessionUUID, c.Session.UUID.String())
+		c.Session.Update(model.Fields{
+			"IsLock": nil,
+			"LockServerUUID": nil,
+		})
 	}
 
 }

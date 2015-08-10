@@ -16,6 +16,7 @@ import (
 	model_auth_session "sc/models/auth_session"
 	model_user "sc/models/user"
 	model_server "sc/models/server"
+	"sc/model"
 
 	"sc/star"
 )
@@ -28,6 +29,10 @@ type Command struct {
 type CommandDetector struct {
 	SessionUUID		string `json:"session_uuid"`
 	ServerUUID		*string `json:"server_uuid,omitempty"`	
+}
+
+type CommandCheckSessionDetector struct {
+	IsLock			bool  `json:"is_lock"`
 }
 
 type SendCommandAuthUser struct {
@@ -64,17 +69,26 @@ func (c *Command) Execute(message []byte) {
 	session := model_auth_session.LoadOrCreateSession(commandDetector.SessionUUID, c.connection.GetRemoteAddr(), c.connection.GetUserAgent())
 
 	if session.IsLock {
-		b, _ := star.Send(session.LockServerUUID, map[string]interface{}{
-			"command": "session_lock_state",
+		b, err := star.Send(session.LockServerUUID, map[string]interface{}{
+			"command": "get_session_lock_state",
 			"session_uuid": session.UUID,
 		})
+
+		var commandCheckSessionDetector CommandCheckSessionDetector
+		if err == nil {
+			json.Unmarshal(b, &commandCheckSessionDetector)
+		}
+
+		if err != nil || commandCheckSessionDetector.IsLock {
+			session.Create(c.connection.GetRemoteAddr(), c.connection.GetUserAgent())
+		}
 
 		logger.String(string(b))
 	}
 
-	session.Update(map[string]interface{}{
-		"lock": true,
-		"lock_server_uuid": c.ctx.ServerUUID,
+	session.Update(model.Fields{
+		"IsLock": true,
+		"LockServerUUID": c.ctx.ServerUUID,
 	})
 
 	sendCommandAuth := SendCommandAuth{

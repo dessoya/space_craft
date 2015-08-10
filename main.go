@@ -27,6 +27,8 @@ import (
 	"github.com/gocql/gocql"
 	module_config "sc/config"
 
+	"sc/model"
+
 	model_auth_session "sc/models/auth_session"
 	model_user "sc/models/user"
 	model_server "sc/models/server"
@@ -103,6 +105,8 @@ func main() {
     }
 
     server := model_server.New(ip, config.Http.Port)
+    model.Init(server.UUID, session)
+
     server.StartUpdater()
     star.SetLocalServer(server)
 
@@ -113,7 +117,7 @@ func main() {
 	connectionFactory.InstallCommand("logout", cmd_logout.Generator)
 
 	// star commands
-	connectionFactory.InstallCommand("session_lock_state", cmd_session_lock_state.Generator)
+	connectionFactory.InstallCommand("get_session_lock_state", cmd_session_lock_state.Generator)
 
 	commandContext := &command.Context{ CQLSession: session, Config: config, ServerUUID: server.UUID }
 
@@ -156,6 +160,14 @@ func main() {
 
 	http.HandleFunc("/api/auth/success", func(w http.ResponseWriter, r *http.Request) {		
 		
+		logger.String("/api/auth/success")
+
+		/*
+		ra := r.RemoteAddr[:strings.Index(r.RemoteAddr, ":")]
+		logger.String("remoteAdder " + ra)
+		logger.String(fmt.Sprintf("%+v", r.Header))
+		*/
+
 		/*
 		logger.String(fmt.Sprintf("session_uuid %s", r.URL.Query().Get("session_uuid")))
 		logger.String(fmt.Sprintf("method %s", r.URL.Query().Get("method")))
@@ -191,7 +203,9 @@ func main() {
 		// logger.String(string(body))		
 
 		session_uuid := r.URL.Query().Get("session_uuid")
-		session := model_auth_session.LoadOrCreateSession(session_uuid, r.RemoteAddr, r.Header["User-Agent"][0])
+		logger.String("session_uuid " + session_uuid)
+
+		session := model_auth_session.LoadOrCreateSession(session_uuid, "", r.Header["User-Agent"][0])
 
 		methodUUID := model_user.GetMethodUUID(r.URL.Query().Get("method"), r.URL.Query().Get("unique"))
 		user, _ := model_user.GetByMethodUUID(r.URL.Query().Get("method"), methodUUID)
@@ -201,14 +215,26 @@ func main() {
 			// check for another user and relogin
 			if user.Exists && user.UUID.String() != session.UserUUID.String() {
 
-				m := r.URL.Query().Get("method") + "_uuid"
+				// m := r.URL.Query().Get("method") + "_uuid"
+
+				// user.AddMethod(r.URL.Query().Get("method"), methodUUID)
+
+				/*
 				user.Update(map[string]interface{}{
 					m: methodUUID,
 				})
+				*/
 
+/*
 				session.Update(map[string]interface{}{
 					"user_uuid": user.UUID,
 					"auth_method": r.URL.Query().Get("method"),
+				})
+				*/
+
+				session.Update(model.Fields{
+					"UserUUID":		user.UUID,
+					"AuthMethod":	r.URL.Query().Get("method"),
 				})
 
 			} else {
@@ -224,17 +250,17 @@ func main() {
 			// loging
 			if !user.Exists {
 				user.Create()
-				m := r.URL.Query().Get("method") + "_uuid"
+				// m := r.URL.Query().Get("method") + "_uuid"
 				user.Update(map[string]interface{}{
 					"username": r.URL.Query().Get("username"),
-					m: methodUUID,
 				})
+				// user.AddMethod(r.URL.Query().Get("method"), methodUUID)
 			}
 
 			session.Update(map[string]interface{}{
-				"is_auth": true,
-				"user_uuid": user.UUID,
-				"auth_method": r.URL.Query().Get("method"),
+				"IsAuth": true,
+				"UserUUID": user.UUID,
+				"AuthMethod": r.URL.Query().Get("method"),
 			})
 		}
 

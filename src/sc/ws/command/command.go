@@ -15,6 +15,7 @@ type Connection interface {
 	Send(string)
 
 	SetSession (session *model_auth_session.Session)
+	GetSession () *model_auth_session.Session
 	
 	SetServerAuthState ()
 	GetServerAuthState () bool

@@ -100,6 +100,10 @@ func (l *LocalConnection) SetSession (session *model_auth_session.Session) {
 
 }
 
+func (l *LocalConnection) GetSession () *model_auth_session.Session {
+	return nil
+}
+
 func (l *LocalConnection) SetServerAuthState () {
 }
 

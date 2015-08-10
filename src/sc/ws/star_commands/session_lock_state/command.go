@@ -3,6 +3,7 @@ package session_lock_state
 
 import (	
 	"sc/ws/command"
+	"sc/ws/connection"
 	"encoding/json"	
 )
 
@@ -13,6 +14,7 @@ type Command struct {
 
 type CommandDetector struct {
 	CommandId		int `json:"command_id"`
+	SessionUUID		string `json:"session_uuid"`
 }
 
 func (c *Command) Execute(message []byte) {
@@ -24,9 +26,21 @@ func (c *Command) Execute(message []byte) {
 	var commandDetector CommandDetector
 	json.Unmarshal(message, &commandDetector)
 
+	var isLock bool = false
+
+	conn := connection.GetConnectionBySessionUUID(commandDetector.SessionUUID)
+	if conn != nil {
+		s := conn.GetSession()
+		if s != nil {
+			isLock = true
+		}
+	}
+	
+
 	b, _ := json.Marshal(map[string]interface{}{
 		"command": "answer",
 		"command_id": commandDetector.CommandId,
+		"is_lock": isLock,
 	})
 
 	c.connection.Send(string(b))
