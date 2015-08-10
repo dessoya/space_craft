@@ -45,6 +45,10 @@ func New() *Factory {
 	return &f
 }
 
+func (f *Factory) GetCommands() map[string]command.Generator {
+	return f.commands
+}
+
 func (f *Factory) connectionsTreator() {
 
 	pingTicker := time.NewTicker(connection.PingPeriod)
@@ -86,14 +90,14 @@ func (f *Factory) connectionsTreator() {
 	}
 }
 
-func (f *Factory) CreateConnection(ws *websocket.Conn, ctx *command.Context) *connection.Connection {
+func (f *Factory) CreateConnection(ws *websocket.Conn, ctx *command.Context, remoteAddr string, userAgent string) *connection.Connection {
 
 	f.mutex.Lock()
 	id := f.connectionIdGenerator
 	f.connectionIdGenerator ++
 	f.mutex.Unlock()
 
-	c := connection.New(ws, id, f.closeChannel, &f.writeChannel, f.commands, ctx)
+	c := connection.New(ws, id, f.closeChannel, &f.writeChannel, f.commands, ctx, remoteAddr, userAgent)
 	f.connections[id] = c
 
 	return c

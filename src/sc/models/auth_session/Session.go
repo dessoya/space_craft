@@ -19,10 +19,14 @@ func Init(session_ *gocql.Session) {
 }
 
 type Session struct {
-	UUID		gocql.UUID
-	Exists		bool
-	IsAuth		bool
-	UserUUID	gocql.UUID
+	UUID			gocql.UUID
+	Exists			bool
+	IsAuth			bool
+	UserUUID		gocql.UUID
+	RemoteAddr		string
+	UserAgent		string
+	IsLock			bool
+	LockServerUUID	gocql.UUID
 }
 
 func (s *Session) Load() {
@@ -38,14 +42,18 @@ func (s *Session) Load() {
 		return
 	}
 
-	s.IsAuth = row["is_auth"].(bool)
-	s.UserUUID = row["user_uuid"].(gocql.UUID)
+	s.IsAuth			= row["is_auth"].(bool)
+	s.UserUUID			= row["user_uuid"].(gocql.UUID)
+	s.RemoteAddr		= row["remote_addr"].(string)
+	s.UserAgent			= row["user_agent"].(string)
+	s.IsLock			= row["lock"].(bool)
+	s.LockServerUUID	= row["lock_server_uuid"].(gocql.UUID)
 
 	s.Exists = true
 
 }
 
-func (s *Session) Create() {
+func (s *Session) Create(remoteAddr string, userAgent string) {
 
 	s.Exists = false
 
@@ -56,7 +64,7 @@ func (s *Session) Create() {
 		var apply bool
 		var err error
 
-		if apply, err = CQLSession.Query(fmt.Sprintf(`insert into auth_sessions (session_uuid,last_access,create_time) values (%s,now(),now()) if not exists`, s.UUID)).MapScanCAS(row); err != nil {	
+		if apply, err = CQLSession.Query(`insert into auth_sessions (session_uuid,last_access,create_time, remote_addr, user_agent) values (?,now(),now(),?,?) if not exists`, s.UUID, remoteAddr, userAgent).MapScanCAS(row); err != nil {	
 			logger.Error(errors.New(err))
 			return
 		}
@@ -70,7 +78,7 @@ func (s *Session) Create() {
 	
 }
 
-func LoadOrCreateSession(uuid string) *Session {
+func LoadOrCreateSession(uuid string, remoteAddr string, userAgent string) *Session {
 
 	s := &Session{ }
 
@@ -80,8 +88,8 @@ func LoadOrCreateSession(uuid string) *Session {
 		s.Load()
 	}
 
-	if !s.Exists {
-		s.Create()
+	if !s.Exists || remoteAddr != s.RemoteAddr || userAgent != s.UserAgent {
+		s.Create(remoteAddr, userAgent)
 	}
 
 	return s

@@ -4,8 +4,9 @@ package main
 import (
 	"io/ioutil"
 	"encoding/json"
+	"os"
 
-	// "fmt"
+	"fmt"
 
 	"sc/errors"
 	module_config "sc/config"
@@ -37,7 +38,24 @@ func readConfig() (*module_config.Config, *errors.Error) {
 		return &defaultConfig, errors.New(err)
 	}
 
-	data, err = ioutil.ReadFile("local.config.json")
+	var localConfig string = "local.config.json"
+	mode := "search"
+	for _, arg := range os.Args {
+
+		if arg[0] == '-' {
+			mode = arg
+			continue
+		}
+
+		switch mode {
+		case "-localConfig":
+			localConfig = arg
+			mode = "search"
+		}
+	}
+	fmt.Printf("use local config: %s\n", localConfig)
+
+	data, err = ioutil.ReadFile(localConfig)
 
 	if err == nil {
 

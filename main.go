@@ -5,6 +5,8 @@ import (
 	"expvar"
 	"runtime"
 
+	"strings"
+	"net"
 	"encoding/json"
 	"io"	
 	"io/ioutil"	
@@ -13,9 +15,11 @@ import (
 	"net/http"
 	"os"
 	"log"
+	// "flag"
 
 	"sc/logger"
 	"sc/errors"
+	"sc/star"
 
 	"sc/ws/command"
 	"sc/ws/connection"
@@ -25,14 +29,33 @@ import (
 
 	model_auth_session "sc/models/auth_session"
 	model_user "sc/models/user"
+	model_server "sc/models/server"
 
 	cmd_auth "sc/ws/commands/auth"
 	cmd_logout "sc/ws/commands/logout"
+
+	cmd_session_lock_state "sc/ws/star_commands/session_lock_state"
 )
 
 func goroutines() interface{} {
     return runtime.NumGoroutine()
 }
+
+func localIP() (string, error) {
+
+	addrs, tt := net.InterfaceAddrs()
+	if tt != nil {
+    	return "", tt
+	}   
+	for _, addr := range addrs {
+		s := addr.String()
+		if s[0] == '0' {
+			continue
+		}
+		return s, nil
+	}  
+	return "", nil
+} 
 
 
 var config *module_config.Config
@@ -69,19 +92,38 @@ func main() {
 
     model_auth_session.Init(session)
     model_user.Init(session)
+    model_server.Init(session)
 
 
+
+    ip, t := localIP()
+    if t != nil {
+    	logger.Error(errors.New(t))
+    	os.Exit(0)
+    }
+
+    server := model_server.New(ip, config.Http.Port)
+    server.StartUpdater()
+    star.SetLocalServer(server)
 
 	var connectionFactory = factory.New()
 
+	// clients commands
 	connectionFactory.InstallCommand("auth", cmd_auth.Generator)
 	connectionFactory.InstallCommand("logout", cmd_logout.Generator)
 
+	// star commands
+	connectionFactory.InstallCommand("session_lock_state", cmd_session_lock_state.Generator)
 
-	commandContext := &command.Context{ CQLSession: session, Config: config }
+	commandContext := &command.Context{ CQLSession: session, Config: config, ServerUUID: server.UUID }
+
+	star.SetCommands(connectionFactory.GetCommands(), commandContext)
+
+
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 
+		logger.String("/ws")
 		if r.Method != "GET" {
 			http.Error(w, "Method not allowed", 405)
 			return
@@ -93,7 +135,10 @@ func main() {
 			return
 		}
 
-		c := connectionFactory.CreateConnection(ws, commandContext)
+		ra := r.RemoteAddr[:strings.Index(r.RemoteAddr, ":")]
+		c := connectionFactory.CreateConnection(ws, commandContext, ra, r.Header["User-Agent"][0])
+		// logger.String(ra)
+		// logger.String(r.Header["User-Agent"][0])
 		logger.String(fmt.Sprintf("accept connection %v", c.Id))
 		// go c.Writing()
 		c.Reading()
@@ -146,7 +191,7 @@ func main() {
 		// logger.String(string(body))		
 
 		session_uuid := r.URL.Query().Get("session_uuid")
-		session := model_auth_session.LoadOrCreateSession(session_uuid)
+		session := model_auth_session.LoadOrCreateSession(session_uuid, r.RemoteAddr, r.Header["User-Agent"][0])
 
 		methodUUID := model_user.GetMethodUUID(r.URL.Query().Get("method"), r.URL.Query().Get("unique"))
 		user, _ := model_user.GetByMethodUUID(r.URL.Query().Get("method"), methodUUID)
