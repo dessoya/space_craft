@@ -85,7 +85,7 @@ func main() {
 
 
 
-	cluster := gocql.NewCluster("192.168.88.102")
+	cluster := gocql.NewCluster(config.Cassandra.IP)
     cluster.Keyspace = "sc_2"
     cluster.Consistency = 1
 

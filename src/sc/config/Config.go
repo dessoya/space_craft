@@ -13,8 +13,13 @@ type ConfigAuth struct {
 	Methods []string `json:"methods"`
 }
 
+type ConfigCassandra struct {
+	IP string `json:"ip"`
+}
+
 type Config struct {
-	Http ConfigHTTP			`json:"http"`
-	Logger ConfigLogger		`json:"logger"`
-	Auth ConfigAuth			`json:"auth"`
+	Cassandra ConfigCassandra	`json:"cassandra"`
+	Http ConfigHTTP				`json:"http"`
+	Logger ConfigLogger			`json:"logger"`
+	Auth ConfigAuth				`json:"auth"`
 }
