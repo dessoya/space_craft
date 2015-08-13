@@ -11,6 +11,8 @@ import (
 	"sc/ws/command"
 	"sc/logger"
 	"sc/errors"
+
+	model_user "sc/models/user"
 )
 
 type DebugInfo struct {
@@ -43,6 +45,18 @@ func New() *Factory {
 	go f.connectionsTreator()
 
 	return &f
+}
+
+func (f *Factory) GetConnections() []*connection.Connection {
+
+	f.mutex.Lock()
+	a := make([]*connection.Connection, 0)
+	for _, connection := range f.connections {
+		a = append(a, connection)
+	}
+	f.mutex.Unlock()
+
+	return a
 }
 
 func (f *Factory) GetCommands() map[string]command.Generator {
@@ -108,16 +122,38 @@ func (f *Factory) InstallCommand (commandName string, commandGenerator command.G
 }
 
 
-func (f *Factory) MakeDebugInfo () *DebugInfo {
+func (f *Factory) MakeDebugInfo () map[string]interface{} {
 
-	di := DebugInfo{ Connections: make(map[string]interface{}), WriteChannelSize: len(f.writeChannel) }
+	di := map[string]interface{}{
+		"Connections": map[string]interface{}{},
+		"WriteChannelSize": len(f.writeChannel),
+		"Models": map[string]interface{}{
+			"Sessions": map[string]interface{}{},
+			"Users": map[string]interface{}{},
+		},
+	}
 
 	f.mutex.Lock()
-	for index, _ := range f.connections {
-		di.Connections[fmt.Sprintf("%d", index)] = make(map[string]interface{})
+	for index, conn := range f.connections {
+		c := map[string]interface{}{}
+		c["SessionUUID"] = conn.Session.UUID.String()
+		i := fmt.Sprintf("%d", index)
+		item := di["Connections"].(map[string]interface{})
+		item[i] = c
 	}
 	f.mutex.Unlock()
 
-	return &di
+	for _, user := range model_user.Users {
+
+		c := map[string]interface{}{}
+		c["IsLock"] = user.IsLock
+		
+		item := di["Models"].(map[string]interface{})
+		item = item["Users"].(map[string]interface{})
+		item[user.UUID.String()] = c
+
+	}
+
+	return di
 }
 

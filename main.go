@@ -37,6 +37,8 @@ import (
 	cmd_logout "sc/ws/commands/logout"
 
 	cmd_session_lock_state "sc/ws/star_commands/session_lock_state"
+	cmd_user_lock_state "sc/ws/star_commands/get_user_lock_state"
+	cmd_user_logout "sc/ws/star_commands/star_user_logout"
 )
 
 func goroutines() interface{} {
@@ -118,8 +120,10 @@ func main() {
 
 	// star commands
 	connectionFactory.InstallCommand("get_session_lock_state", cmd_session_lock_state.Generator)
+	connectionFactory.InstallCommand("get_user_lock_state", cmd_user_lock_state.Generator)
+	connectionFactory.InstallCommand("star_user_logout", cmd_user_logout.Generator)
 
-	commandContext := &command.Context{ CQLSession: session, Config: config, ServerUUID: server.UUID }
+	commandContext := &command.Context{ Factory: connectionFactory, CQLSession: session, Config: config, ServerUUID: server.UUID }
 
 	star.SetCommands(connectionFactory.GetCommands(), commandContext)
 
@@ -168,14 +172,6 @@ func main() {
 		logger.String(fmt.Sprintf("%+v", r.Header))
 		*/
 
-		/*
-		logger.String(fmt.Sprintf("session_uuid %s", r.URL.Query().Get("session_uuid")))
-		logger.String(fmt.Sprintf("method %s", r.URL.Query().Get("method")))
-		logger.String(fmt.Sprintf("username %s", r.URL.Query().Get("username")))
-		logger.String(fmt.Sprintf("unique %s", r.URL.Query().Get("unique")))
-		logger.String(fmt.Sprintf("token %s", r.URL.Query().Get("token")))
-		*/
-
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", "http://auth.spacecraft-online.org/api/check_token?token=" + r.URL.Query().Get("token"), nil)
 		if err != nil {
@@ -196,7 +192,9 @@ func main() {
 		}
 
  		if string(body) != "{\"status\":\"ok\",\"result\":true}" {
-			logger.Error(errors.New(err))
+ 			logger.String(string(body))
+			http.Redirect(w, r, "/", http.StatusMovedPermanently)			
+			// logger.Error(errors.New(err))
 			return
  		}
 
@@ -207,62 +205,39 @@ func main() {
 
 		session := model_auth_session.LoadOrCreateSession(session_uuid, "", r.Header["User-Agent"][0])
 
-		methodUUID := model_user.GetMethodUUID(r.URL.Query().Get("method"), r.URL.Query().Get("unique"))
-		user, _ := model_user.GetByMethodUUID(r.URL.Query().Get("method"), methodUUID)
+		method := r.URL.Query().Get("method")
+		unique := r.URL.Query().Get("unique")
+		user, _ := model_user.GetByMethod(method, unique)
 
 		if session.IsAuth {
 
 			// check for another user and relogin
 			if user.Exists && user.UUID.String() != session.UserUUID.String() {
 
-				// m := r.URL.Query().Get("method") + "_uuid"
-
-				// user.AddMethod(r.URL.Query().Get("method"), methodUUID)
-
-				/*
-				user.Update(map[string]interface{}{
-					m: methodUUID,
-				})
-				*/
-
-/*
-				session.Update(map[string]interface{}{
-					"user_uuid": user.UUID,
-					"auth_method": r.URL.Query().Get("method"),
-				})
-				*/
-
-				session.Update(model.Fields{
-					"UserUUID":		user.UUID,
-					"AuthMethod":	r.URL.Query().Get("method"),
-				})
+				user.AddMethod(method, unique)
 
 			} else {
 
 			}
-
-			// update auth method
-
-
 
 		} else {
 
 			// loging
 			if !user.Exists {
 				user.Create()
-				// m := r.URL.Query().Get("method") + "_uuid"
-				user.Update(map[string]interface{}{
-					"username": r.URL.Query().Get("username"),
+				user.Update(model.Fields{
+					"Name": r.URL.Query().Get("username"),
 				})
-				// user.AddMethod(r.URL.Query().Get("method"), methodUUID)
+				user.AddMethod(method, unique)
 			}
 
-			session.Update(map[string]interface{}{
-				"IsAuth": true,
-				"UserUUID": user.UUID,
-				"AuthMethod": r.URL.Query().Get("method"),
-			})
 		}
+
+		session.Update(model.Fields{
+			"IsAuth": true,
+			"UserUUID": user.UUID,
+			"AuthMethod": method,
+		})
 
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)
 	})

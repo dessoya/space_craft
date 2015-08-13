@@ -52,6 +52,8 @@ func (c *Command) Execute(message []byte) {
 	var commandDetector CommandDetector
 	json.Unmarshal(message, &commandDetector)
 
+
+	// inner connection auth
 	if commandDetector.ServerUUID != nil {
 		ServerUUID, _ := gocql.ParseUUID(*commandDetector.ServerUUID)
 		// todo: check err
@@ -66,10 +68,12 @@ func (c *Command) Execute(message []byte) {
 		return
 	}
 
+	
+	// ---------------
 	session := model_auth_session.LoadOrCreateSession(commandDetector.SessionUUID, c.connection.GetRemoteAddr(), c.connection.GetUserAgent())
 
 	if session.IsLock {
-		b, err := star.Send(session.LockServerUUID, map[string]interface{}{
+		b, err := star.Send(session.LockServerUUID, model.Fields{
 			"command": "get_session_lock_state",
 			"session_uuid": session.UUID,
 		})
@@ -86,10 +90,8 @@ func (c *Command) Execute(message []byte) {
 		logger.String(string(b))
 	}
 
-	session.Update(model.Fields{
-		"IsLock": true,
-		"LockServerUUID": c.ctx.ServerUUID,
-	})
+	session.Lock()
+	c.connection.SetSession(session)
 
 	sendCommandAuth := SendCommandAuth{
 		Command:			"auth",
@@ -99,12 +101,51 @@ func (c *Command) Execute(message []byte) {
 	}
 
 	if session.IsAuth {
-		user := model_user.New(session.UserUUID)
-		if user.Exists {
+
+		user := model_user.New()
+		user.UUID = session.UserUUID
+		user.Load()
+
+		// check for user lock
+		if user.IsLock {
+
+			b, err := star.Send(user.LockServerUUID, model.Fields{
+				"command": "get_user_lock_state",
+				"user_uuid": user.UUID.String(),
+			})
+
+			if err != nil {
+
+			} else {
+
+				type CommandCheckUserDetector struct {
+					IsLock			bool  `json:"is_lock"`
+				}
+
+				var commandCheckUserDetector CommandCheckUserDetector
+				json.Unmarshal(b, &commandCheckUserDetector)
+
+				if commandCheckUserDetector.IsLock {
+					
+					_, _ = star.Send(user.LockServerUUID, model.Fields{
+						"command": "star_user_logout",
+						"user_uuid": user.UUID,
+						"session_uuid": session.UUID.String(),
+					})
+
+					user.Load()
+				}
+
+			}
+		}
+
+		user.Lock()
+
+		// if user.Exists {
 			sendCommandAuth.User = SendCommandAuthUser{
 				Name: user.Name,
 			}
-		}
+		// }
 	}
 
 	b, err := json.Marshal(sendCommandAuth)
@@ -113,7 +154,6 @@ func (c *Command) Execute(message []byte) {
 		return
 	}
 	
-	c.connection.SetSession(session)
 	c.connection.Send(string(b))
 }
 

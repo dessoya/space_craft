@@ -14,6 +14,16 @@ import (
 )
 
 var Sessions = map[string]*Session{}
+// todo: mutex
+func Get(UUID string) *Session {
+	session, ok := Sessions[UUID]
+	if ok {
+		return session
+	}
+
+	return nil
+}
+
 
 var CQLSession *gocql.Session
 
@@ -26,6 +36,7 @@ type Session struct {
 	model.Model
 
 	IsAuth			bool			`cql:"is_auth"`
+	AuthMethod		string			`cql:"auth_method"`
 	UserUUID		gocql.UUID		`cql:"user_uuid"`
 	RemoteAddr		string			`cql:"remote_addr"`
 	UserAgent		string			`cql:"user_agent"`
@@ -34,6 +45,10 @@ type Session struct {
 
 func (s *Session) PlaceModel() {
 	Sessions[s.UUID.String()] = s
+}
+
+func (s *Session) RemoveModel() {
+	delete(Sessions, s.UUID.String())
 }
 
 func New() *Session {

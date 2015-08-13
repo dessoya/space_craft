@@ -4,14 +4,36 @@ package user
 import (
 	"crypto/md5"
 	"io"
-	"fmt"
-	"strings"
 
 	"sc/logger"
 	"sc/errors"
 
+	"sc/model"
+
 	"github.com/gocql/gocql"
 )
+
+var Users = map[string]*User{}
+// todo: mutex
+func Get(UUID string) *User {
+	user, ok := Users[UUID]
+	if ok {
+		return user
+	}
+
+	return nil
+}
+
+/*
+func Get(UUID goclq.UUID) *User {
+	user, ok := Users[UUID.String()]
+	if ok {
+		return user
+	}
+
+	return nil
+}
+*/
 
 var CQLSession *gocql.Session
 
@@ -20,14 +42,23 @@ func Init(session_ *gocql.Session) {
 }
 
 type User struct {
-	UUID		gocql.UUID
-	Exists		bool
-	Name		string
+	model.Model
+
+	Name		string		`cql:"username"`
 }
 
-func New(UUID gocql.UUID) *User {
-	u := &User{ UUID: UUID, Exists: false }
-	u.Load()
+func (u *User) PlaceModel() {
+	Users[u.UUID.String()] = u
+}
+
+func (u *User) RemoveModel() {
+	delete(Users, u.UUID.String())
+}
+
+
+func New() *User {
+	u := &User{ Model: model.Model{ TableName: "users", UUIDFieldName: "user_uuid" } }
+	u.Child = u
 	return u
 }
 
@@ -42,7 +73,7 @@ func (u *User) Create() (error) {
 		var apply bool
 		var err error
 
-		if apply, err = CQLSession.Query(fmt.Sprintf(`insert into users (user_uuid,create_time) values (%s,now()) if not exists`, u.UUID)).MapScanCAS(row); err != nil {	
+		if apply, err = CQLSession.Query(`insert into users (user_uuid,create_time) values (?,now()) if not exists`, u.UUID).MapScanCAS(row); err != nil {	
 			logger.Error(errors.New(err))
 			return err
 		}
@@ -55,43 +86,22 @@ func (u *User) Create() (error) {
 	return nil
 }
 
-func (u *User) Update(fields map[string]interface{}) error {
+func GetMethodUUID(method string, unique string) gocql.UUID {
 
-	pairs := []string{}
+	h := md5.New()
+	io.WriteString(h, method)
+	io.WriteString(h, unique)
+	methodUUID, _ := gocql.UUIDFromBytes(h.Sum(nil))
 
-	for key, value := range fields {
+	return methodUUID
+}
 
-		var pair string = key + " = "
-		switch t := value.(type) {
-		case string:
-			pair += "'" + t + "'"
-		case *gocql.UUID:
-			pair += t.String()
-		case gocql.UUID:
-			pair += t.String()
-		default:
-			logger.Error(errors.New(fmt.Sprintf("unknown type: %+v",t)))
-		}
-		pairs = append(pairs, pair)
-	}
 
-	for key, value := range fields {
-		switch key {
-		case "fake_uuid", "vk_uuid", "facebook_uuid", "google_uuid":
-			method := key[:len(key) - 5]
-			q := fmt.Sprintf("insert into idx_users_method_uuid (method, method_uuid, user_uuid) values ('%s', %s, %s)", method, value, u.UUID.String())
-			logger.String(q)
-			if err := CQLSession.Query(q).Exec(); err != nil {	
-				logger.Error(errors.New(err))
-				return err
-			}
-		}
-	}	
+func (u *User) AddMethod(method string, unique string) error {
 
-	q := "update users set " + strings.Join(pairs, ",") + " where user_uuid = " + u.UUID.String()
-	logger.String(q)
+	methodUUID := GetMethodUUID(method, unique)
 
-	if err := CQLSession.Query(q).Exec(); err != nil {	
+	if err := CQLSession.Query(`insert into idx_users_method_uuid (method, method_uuid, user_uuid) values (?,?,?)`, method, methodUUID, u.UUID).Exec(); err != nil {	
 		logger.Error(errors.New(err))
 		return err
 	}
@@ -99,50 +109,13 @@ func (u *User) Update(fields map[string]interface{}) error {
 	return nil
 }
 
-func (u *User) Load() (err error) {
+func GetByMethod(method string, unique string) (*User, error) {
 
-	var row = map[string]interface{}{}
+	methodUUID := GetMethodUUID(method, unique)
+	u := New()
 
-	query := fmt.Sprintf(`select * from users where user_uuid = %s`, u.UUID.String())
-	logger.String(query)
-
-	if err = CQLSession.Query(query).MapScan(row); err != nil {
-
-		if err != gocql.ErrNotFound {
-			logger.Error(errors.New(err))
-		}
-
-		return
-	}
-
-	logger.String(fmt.Sprintf("%+v", row))
-
-	u.Exists = true
-
-	u.Name = row["username"].(string)
-
-	return
-}
-
-func GetMethodUUID(method string, unique string) *gocql.UUID {
-
-	h := md5.New()
-	io.WriteString(h, method)
-	io.WriteString(h, unique)
-	methodUUID, _ := gocql.UUIDFromBytes(h.Sum(nil))
-
-	return &methodUUID
-}
-
-func GetByMethodUUID(method string, methodUUID *gocql.UUID) (*User, error) {
-
-	u := &User{ Exists: false }
-
-	var row = map[string]interface{}{}
-	query := fmt.Sprintf(`SELECT * FROM idx_users_method_uuid where method = '%s' and method_uuid = %s`, method, methodUUID.String())
-	logger.String(query)
-	
-	if err := CQLSession.Query(query).MapScan(row); err != nil {
+	var row = model.Fields{}
+	if err := CQLSession.Query(`SELECT * FROM idx_users_method_uuid where method = ? and method_uuid = ?`, method, methodUUID).MapScan(row); err != nil {
 		if err != gocql.ErrNotFound {
 			logger.Error(errors.New(err))
 		}

@@ -1,13 +1,12 @@
 
-package session_lock_state 
+package star_user_logout
 
 import (	
 	"sc/ws/command"
 	// "sc/ws/connection"
+	"sc/ws/connection/factory"
 	"encoding/json"	
-
-	model_auth_session "sc/models/auth_session"
-
+	// model_user "sc/models/user"
 )
 
 type Command struct {
@@ -17,6 +16,7 @@ type Command struct {
 
 type CommandDetector struct {
 	CommandId		int `json:"command_id"`
+	UserUUID		string `json:"user_uuid"`
 	SessionUUID		string `json:"session_uuid"`
 }
 
@@ -29,18 +29,29 @@ func (c *Command) Execute(message []byte) {
 	var commandDetector CommandDetector
 	json.Unmarshal(message, &commandDetector)
 
-	var isLock bool = false
 
-	s := model_auth_session.Get(commandDetector.SessionUUID)
-	if s != nil && s.IsLock {
-		isLock = true
-	}	
+	var f *factory.Factory = c.ctx.Factory.(*factory.Factory)
+
+	conns := f.GetConnections()
+	for _, conn := range conns {
+
+		// get connection with user uuid
+		s := conn.GetSession()
+		if s != nil && s.UUID.String() != commandDetector.SessionUUID && s.IsAuth && s.UserUUID.String() == commandDetector.UserUUID {
+
+			// unauth
+			conn.UnAuth()
+
+			// reload
+			// conn.Send(`{"command":"reload"}`)
+		}
+	}
+
 	
 
 	b, _ := json.Marshal(map[string]interface{}{
 		"command": "answer",
 		"command_id": commandDetector.CommandId,
-		"is_lock": isLock,
 	})
 
 	c.connection.Send(string(b))

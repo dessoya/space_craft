@@ -12,9 +12,11 @@ import (
 	"sc/logger"
 	"sc/errors"
 	"sc/ws/command"
+	"sc/model"
 
 	model_auth_session "sc/models/auth_session"
-	"sc/model"
+	model_user "sc/models/user"
+	// "sc/model"
 )
 
 const (
@@ -51,9 +53,6 @@ type WriteMessage struct {
 }
 
 type WriteChannel chan *WriteMessage
-
-
-var connectionBySessionUUID map[string]*Connection = map[string]*Connection{}
 
 
 func New(
@@ -101,14 +100,6 @@ func (c *Connection) GetServerAuthState () bool {
 	return c.IsServerAuth
 }
 
-func GetConnectionBySessionUUID(sessionUUID string) *Connection {
-	c, ok := connectionBySessionUUID[sessionUUID]
-	if ok {
-		return c
-	}
-	return nil
-}
-
 func (c *Connection) GetSession () *model_auth_session.Session {
 
 	if c.SessionExists {
@@ -119,9 +110,6 @@ func (c *Connection) GetSession () *model_auth_session.Session {
 }
 
 func (c *Connection) SetSession (session *model_auth_session.Session) {
-
-	// todo: lock
-	connectionBySessionUUID[session.UUID.String()] = c
 
 	c.Session = session
 	c.SessionExists = true
@@ -164,11 +152,33 @@ func (c *Connection) Reading() {
 	}
 
 	if c.SessionExists {
-		delete(connectionBySessionUUID, c.Session.UUID.String())
+		if c.Session.IsAuth {
+			user := model_user.Get(c.Session.UserUUID.String())
+			user.Unlock()
+		}
+		c.Session.Unlock()
+
+	}
+
+}
+
+func (c *Connection) UnAuth() {
+
+	if c.SessionExists && c.Session.IsAuth {
+
+		user := model_user.Get(c.Session.UserUUID.String())
+		if user != nil {
+			user.Unlock()
+		}
+
+		
 		c.Session.Update(model.Fields{
-			"IsLock": nil,
-			"LockServerUUID": nil,
+			"IsAuth": false,
+			"UserUUID": nil,
+			"AuthMethod": nil,
 		})
+
+		c.Send(`{"command":"reload"}`)
 	}
 
 }

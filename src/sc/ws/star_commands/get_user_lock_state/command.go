@@ -1,13 +1,14 @@
 
-package session_lock_state 
+package get_user_lock_state
 
 import (	
 	"sc/ws/command"
 	// "sc/ws/connection"
 	"encoding/json"	
+	model_user "sc/models/user"
 
-	model_auth_session "sc/models/auth_session"
-
+	"fmt"
+	"sc/logger"
 )
 
 type Command struct {
@@ -17,7 +18,7 @@ type Command struct {
 
 type CommandDetector struct {
 	CommandId		int `json:"command_id"`
-	SessionUUID		string `json:"session_uuid"`
+	UserUUID		string `json:"user_uuid"`
 }
 
 func (c *Command) Execute(message []byte) {
@@ -31,11 +32,11 @@ func (c *Command) Execute(message []byte) {
 
 	var isLock bool = false
 
-	s := model_auth_session.Get(commandDetector.SessionUUID)
-	if s != nil && s.IsLock {
+	user := model_user.Get(commandDetector.UserUUID)
+	logger.String(fmt.Sprintf("commandDetector.UserUUID %+v, user %+v", commandDetector.UserUUID, user))
+	if user != nil && user.IsLock {
 		isLock = true
 	}	
-	
 
 	b, _ := json.Marshal(map[string]interface{}{
 		"command": "answer",

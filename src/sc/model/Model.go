@@ -25,6 +25,7 @@ func Init(UUID gocql.UUID, session *gocql.Session) {
 
 type IModel interface {
 	PlaceModel()
+	RemoveModel()
 }
 
 type Model struct {
@@ -103,8 +104,8 @@ func (m *Model) Update(fields Fields) error {
 
 	val := r.Indirect(r.ValueOf(m.Child))
 
-	logger.String(fmt.Sprintf("%+v", modelInfo))
-	logger.String(fmt.Sprintf("%+v", fields))
+	// logger.String(fmt.Sprintf("%+v", modelInfo))
+	// logger.String(fmt.Sprintf("%+v", fields))
 
 	for key, value := range fields {
 		
@@ -183,7 +184,7 @@ func (m *Model) Update(fields Fields) error {
 		return err
 	}
 
-	logger.String(fmt.Sprintf("%+v", m.Child))
+	// logger.String(fmt.Sprintf("%+v", m.Child))
 
 	return nil
 }
@@ -219,17 +220,29 @@ func (m *Model) Load() error {
 
 	}
 
-	logger.String(fmt.Sprintf("%+v", m.Child))
+	// logger.String(fmt.Sprintf("%+v", m.Child))
 
 	m.Exists = true
 	return nil
 }
 
+
+// todo: lock mutex
+
 func (m *Model) Lock() {
 	m.IsLock = true
 	m.Child.PlaceModel()
-	m.Update(map[string]interface{}{
-		"lock": true,
-		"lock_server_uuid": localServerUUID,
+	m.Update(Fields{
+		"IsLock": true,
+		"LockServerUUID": localServerUUID,
+	})
+}
+
+func (m *Model) Unlock() {
+	m.IsLock = false
+	m.Child.RemoveModel()
+	m.Update(Fields{
+		"IsLock": nil,
+		"LockServerUUID": nil,
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/gocql/gocql"
 	model_auth_session "sc/models/auth_session"
 	"sc/config"
+	// "sc/ws/connection/factory"
 )
 
 type Command interface {
@@ -28,6 +29,7 @@ type Context struct {
 	CQLSession		*gocql.Session
 	Config			*config.Config
 	ServerUUID		gocql.UUID
+	Factory			interface{}
 }
 
 type Generator func(Connection, *Context) Command
