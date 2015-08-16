@@ -35,6 +35,7 @@ import (
 
 	cmd_auth "sc/ws/commands/auth"
 	cmd_logout "sc/ws/commands/logout"
+	cmd_set_section "sc/ws/commands/set_section"
 
 	cmd_session_lock_state "sc/ws/star_commands/session_lock_state"
 	cmd_user_lock_state "sc/ws/star_commands/get_user_lock_state"
@@ -117,6 +118,7 @@ func main() {
 	// clients commands
 	connectionFactory.InstallCommand("auth", cmd_auth.Generator)
 	connectionFactory.InstallCommand("logout", cmd_logout.Generator)
+	connectionFactory.InstallCommand("set_section", cmd_set_section.Generator)
 
 	// star commands
 	connectionFactory.InstallCommand("get_session_lock_state", cmd_session_lock_state.Generator)

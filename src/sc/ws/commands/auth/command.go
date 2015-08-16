@@ -36,7 +36,8 @@ type CommandCheckSessionDetector struct {
 }
 
 type SendCommandAuthUser struct {
-	Name		string		`json:"name"`
+	Name			string		`json:"name"`
+	SectionName		string		`json:"section"`
 }
 
 type SendCommandAuth struct {
@@ -144,6 +145,7 @@ func (c *Command) Execute(message []byte) {
 		// if user.Exists {
 			sendCommandAuth.User = SendCommandAuthUser{
 				Name: user.Name,
+				SectionName: user.SectionName,
 			}
 		// }
 	}

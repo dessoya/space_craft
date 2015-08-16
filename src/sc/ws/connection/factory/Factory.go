@@ -74,11 +74,14 @@ func (f *Factory) connectionsTreator() {
 		select {
 
 		case message := <-f.writeChannel:
-			err := message.Connection.Write(websocket.TextMessage, []byte(message.Message))
-			if err != nil {
-				logger.Error(errors.New(err))
-				message.Connection.Close()
-			}			
+			logger.String("send message: " + message.Message)
+			go func() {
+				err := message.Connection.Write(websocket.TextMessage, []byte(message.Message))
+				if err != nil {
+					logger.Error(errors.New(err))
+					message.Connection.Close()					
+				}			
+			}()
 
 		case c := <-f.closeChannel:
 			delete(f.connections, c.Id)
@@ -86,17 +89,21 @@ func (f *Factory) connectionsTreator() {
 		case <-pingTicker.C:
 			var cs map[uint32]*connection.Connection = make(map[uint32]*connection.Connection)
 
+			logger.String("pingTicker.lock")
 			f.mutex.Lock()
 			for index, connection := range f.connections {
 				cs[index] = connection
 			}
 			f.mutex.Unlock()
+			logger.String("pingTicker.unlock")
 
 			for _, connection := range f.connections {
-				err := connection.Ping()
-				if err != nil {
-					connection.Close()
-				}
+				go func() {
+					err := connection.Ping()
+					if err != nil {
+						connection.Close()
+					}
+				}()
 			}
 
 		// case <-f.closeFactory:

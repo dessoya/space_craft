@@ -45,6 +45,7 @@ type User struct {
 	model.Model
 
 	Name		string		`cql:"username"`
+	SectionName	string		`cql:"section"`
 }
 
 func (u *User) PlaceModel() {

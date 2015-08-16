@@ -154,7 +154,9 @@ func (c *Connection) Reading() {
 	if c.SessionExists {
 		if c.Session.IsAuth {
 			user := model_user.Get(c.Session.UserUUID.String())
-			user.Unlock()
+			if user != nil {
+				user.Unlock()
+			}			
 		}
 		c.Session.Unlock()
 
