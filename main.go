@@ -27,16 +27,6 @@ import (
 	"github.com/gocql/gocql"
 	module_config "sc/config"
 
-	"sc/model"
-	"sc/model2"
-
-	// model_player "sc/models/player"
-	// model_auth_session "sc/models/auth_session"
-	// model_user "sc/models/user"
-	// model_live_planet "sc/models/live_planet"
-	// model_building "sc/models/building"
-	model_server "sc/models/server"
-
 	cmd_auth "sc/ws/commands/auth"
 	cmd_logout "sc/ws/commands/logout"
 	cmd_set_section "sc/ws/commands/set_section"
@@ -47,13 +37,16 @@ import (
 	cmd_user_lock_state "sc/ws/star_commands/get_user_lock_state"
 	cmd_user_logout "sc/ws/star_commands/star_user_logout"
 
-	// "sc/model2"
+	"sc/model"
+	"sc/model2"
+
+	model_server "sc/models/server"
+
 	model2_player			"sc/models2/player"
 	model2_auth_session		"sc/models2/auth_session"
 	model2_user				"sc/models2/user"
 	model2_live_planet		"sc/models2/live_planet"
 	model2_building			"sc/models2/building"
-	// model2_server			"sc/models2/server"
 
 )
 
@@ -110,20 +103,6 @@ func main() {
     session, berr := cluster.CreateSession()
 
 
-    // model2.InstallModels(model_player2.InstallInfo)
-
-    // m := model2.New("player")
-    // uuid, err := gocql.ParseUUID("dda8d8db-46af-11e5-9e40-00ff0a8c5316")
-    // m := model_player2.Load(uuid)
-
-    // m := model2.Load("player", UUID)
-    // m := model2.Get("player", UUID)
-    // m.Lock()
-    // m.Unlock()
-   
-    // logger.String(fmt.Sprintf("%+v", m.Fields))
-    // logger.String(fmt.Sprintf("%+v", m.Get("UserUUID")))
-
 
     model_server.Init(session)
     ip, t := localIP()
@@ -139,39 +118,14 @@ func main() {
     star.SetLocalServer(server)
 
 
-    /*
-    model2_auth_session.Init(session)
-	model2_player.Init(session)
-	model2_user.Init(session)
-	model2_live_planet.Init(session)
-	model2_building.Init(session)
-	*/
-
-    model2.InstallModels(server.UUID,
+    model2.InstallModels(session,
+    	server.UUID,
     	model2_auth_session.InstallInfo,
     	model2_user.InstallInfo,
     	model2_live_planet.InstallInfo,
     	model2_building.InstallInfo,
     	model2_player.InstallInfo)
 
-	// model2_server.Init(session)
-
-/*
-    uuid, _ := gocql.ParseUUID("dda8d8db-46af-11e5-9e40-00ff0a8c5316")
-
-    m, e2 := model2_player.Load(uuid)
-	logger.String(fmt.Sprintf("%+v", m))
-	logger.String(fmt.Sprintf("%+v", e2))
-
-    m, e2 = model2_player.Get(uuid)
-	logger.String(fmt.Sprintf("%+v", m))
-	logger.String(fmt.Sprintf("%+v", e2))
-*/
-    // model_auth_session.Init(session)
-    // model_player.Init(session)
-    // model_user.Init(session)
-    //model_live_planet.Init(session)
-    //model_building.Init(session)
 
 	var connectionFactory = factory.New()
 

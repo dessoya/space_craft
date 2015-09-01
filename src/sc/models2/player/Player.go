@@ -33,10 +33,12 @@ var Field2CQL = map[string]string{
 	"Planets": "planet_uuid_list",
 }
 
+var InstallInfo = model.InstallInfo{ Init: Init }
 var LockServerUUID gocql.UUID
 var CQLSession *gocql.Session
 
-func Init(session *gocql.Session) {
+func Init(session *gocql.Session, serverUUID gocql.UUID) {
+	LockServerUUID = serverUUID
 	CQLSession = session
 }
 

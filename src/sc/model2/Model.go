@@ -2,107 +2,35 @@
 package model2
 
 import(
-	// "github.com/gocql/gocql"
+	"github.com/gocql/gocql"
 )
 
 type Fields map[string]interface{}
 
-/*
-type IFields interface {
-
+type InstallInfo struct {
+	Init func(*gocql.Session, gocql.UUID)
 }
 
-type Model struct {
-	
-	TableName		string
-	UUIDFieldName	string
+func InstallModels(args ...interface{}) {
 
-	UUID			gocql.UUID
-	Exists			bool
+	var session *gocql.Session
+	var serverUUID gocql.UUID
 
-	IsLock			bool
-	LockServerUUID	gocql.UUID
+	for index, arg := range args {
 
-	Fields			IFields
-}
+	    switch index {
+		case 0:
+			session = arg.(*gocql.Session)
 
-func (m *Model) Get() interface{} {
+		case 1:
+			serverUUID = arg.(gocql.UUID)
 
-	return m.Fields
-}
+		default:
+			ii := arg.(InstallInfo)
+			ii.Init(session, serverUUID)
 
-func (m *Model) Create() *Model {
+		}
 
-	return nil
-}
-
-func (m *Model) Load() {
-
-}
-
-func (m *Model) Lock() {
-
-}
-
-func (m *Model) Unlock() {
-	
-}
-
-type ModelTreator interface {
-	New() *Model
-}
-
-type ModelInfo struct {
-	Name		string
-	Treator		ModelTreator
-}
-
-var Models = map[string]ModelTreator{}
-var CQLSession *gocql.Session
-
-func InstallModels(models []ModelInfo, session *gocql.Session) {
-	CQLSession = session	
-	for _, model := range models {
-		Models[model.Name] = model.Treator
-	}
-}
-
-
-func New(name string) *Model {
-
-	t, ok := Models[name]
-	if !ok {
-		return nil
 	}
 
-	return t.New()
 }
-
-func Create(name string) *Model {
-
-	t, ok := Models[name]
-	if !ok {
-		return nil
-	}
-
-	m := t.New()
-	m.Create()
-
-	return m
-}
-
-func Load(name string, uuid gocql.UUID) *Model {
-
-	t, ok := Models[name]
-	if !ok {
-		return nil
-	}
-
-	m := t.New()
-	m.UUID = uuid
-	m.Load()
-
-	return m
-}
-
-*/

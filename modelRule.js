@@ -32,10 +32,12 @@ var Field2CQL = map[string]string{\n'
 
 	a += '}\n\
 \n\
+var InstallInfo = model.InstallInfo{ Init: Init }\n\
 var LockServerUUID gocql.UUID\n\
 var CQLSession *gocql.Session\n\
 \n\
-func Init(session *gocql.Session) {\n\
+func Init(session *gocql.Session, serverUUID gocql.UUID) {\n\
+	LockServerUUID = serverUUID\n\
 	CQLSession = session\n\
 }\n\
 \n\
