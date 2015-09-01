@@ -6,8 +6,8 @@ import (
 
 	"sc/ws/command"
 	// "sc/ws/connection"
-	"sc/model"
-	model_user "sc/models/user"
+	"sc/model2"
+	model_user "sc/models2/user"
 )
 
 type Command struct {
@@ -30,14 +30,14 @@ func (c *Command) Execute(message []byte) {
 	var commandDetector CommandDetector
 	json.Unmarshal(message, &commandDetector)
 	
-	user := model_user.Get(session.UserUUID.String())
+	user, _ := model_user.Get(session.UserUUID)
 	if user == nil {
-		user = model_user.New()
+		user, _ = model_user.Create()
 		user.UUID = session.UserUUID
 		user.Load()
 	}
 
-	user.Update(model.Fields{
+	user.Update(model2.Fields{
 		"SectionName": commandDetector.SectionName,
 	})
 

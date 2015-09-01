@@ -12,10 +12,11 @@ import (
 	"sc/logger"
 	"sc/errors"
 	"sc/ws/command"
-	"sc/model"
+	// "sc/model"
+	"sc/model2"
 
-	model_auth_session "sc/models/auth_session"
-	model_user "sc/models/user"
+	model2_auth_session "sc/models2/auth_session"
+	model2_user "sc/models2/user"
 	// "sc/model"
 )
 
@@ -38,7 +39,7 @@ type Connection struct {
 	userAgent		string
 
 	SessionExists	bool
-	Session			*model_auth_session.Session
+	Session			*model2_auth_session.Fields
 
 	IsServerAuth	bool
 }
@@ -100,7 +101,7 @@ func (c *Connection) GetServerAuthState () bool {
 	return c.IsServerAuth
 }
 
-func (c *Connection) GetSession () *model_auth_session.Session {
+func (c *Connection) GetSession () *model2_auth_session.Fields {
 
 	if c.SessionExists {
 		return c.Session
@@ -109,7 +110,7 @@ func (c *Connection) GetSession () *model_auth_session.Session {
 	return nil
 }
 
-func (c *Connection) SetSession (session *model_auth_session.Session) {
+func (c *Connection) SetSession (session *model2_auth_session.Fields) {
 
 	c.Session = session
 	c.SessionExists = true
@@ -153,7 +154,7 @@ func (c *Connection) Reading() {
 
 	if c.SessionExists {
 		if c.Session.IsAuth {
-			user := model_user.Get(c.Session.UserUUID.String())
+			user := model_user.Get(c.Session.UserUUID)
 			if user != nil {
 				user.Unlock()
 			}			
@@ -174,7 +175,7 @@ func (c *Connection) UnAuth() {
 		}
 
 		
-		c.Session.Update(model.Fields{
+		c.Session.Update(model2.Fields{
 			"IsAuth": false,
 			"UserUUID": nil,
 			"AuthMethod": nil,

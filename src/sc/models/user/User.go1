@@ -11,6 +11,8 @@ import (
 	"sc/model"
 
 	"github.com/gocql/gocql"
+
+	//model_player "sc/models/player"
 )
 
 var Users = map[string]*User{}
@@ -46,6 +48,7 @@ type User struct {
 
 	Name		string		`cql:"username"`
 	SectionName	string		`cql:"section"`
+	PlayerUUID	*gocql.UUID	`cql:"player_uuid"`
 }
 
 func (u *User) PlaceModel() {
@@ -129,3 +132,24 @@ func GetByMethod(method string, unique string) (*User, error) {
 
 	return u, err
 }
+
+/*
+func (u *User) GetPlayer() *model_player.Player {
+
+	if u.PlayerUUID == nil {
+		return nil
+	}
+
+	player := model_player.Get(u.PlayerUUID.String())
+	if player == nil {
+		player = model_player.New()
+		player.UUID = *u.PlayerUUID
+		player.Load()
+		if !player.Exists {
+			return nil
+		}
+	}
+
+	return player
+}
+*/

@@ -1,0 +1,21 @@
+
+package player
+
+import(
+	"github.com/gocql/gocql"
+	"sync"
+	"fmt"
+	"strings"
+	model "sc/model2"
+	"sc/logger"
+	"sc/errors"
+)
+
+var TableName		= "players"
+var UUIDFieldName	= "player_uuid"
+
+type Fields struct {
+	UserUUID			gocql.UUID		`cql:"user_uuid"`
+	CapitalPlanetUUID	gocql.UUID		`cql:"capital_planet_uuid"`
+	Planets				[]gocql.UUID	`cql:"planet_uuid_list"`
+}

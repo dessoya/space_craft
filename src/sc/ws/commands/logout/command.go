@@ -3,8 +3,8 @@ package auth
 
 import (
 	"sc/ws/command"
-	"sc/ws/connection"
-	"sc/model"
+	// "sc/ws/connection"
+	"sc/model2"
 )
 
 type Command struct {
@@ -14,11 +14,19 @@ type Command struct {
 
 func (c *Command) Execute(message []byte) {
 
-	c.connection.(*connection.Connection).Session.Update(model.Fields{
+	session := c.connection.GetSession()
+
+	if session == nil || !session.IsAuth {
+		return
+	}
+
+	session.Update(model2.Fields{
 		"UserUUID": nil,
 		"IsAuth": false,
 		"AuthMethod": nil,
 	})
+
+	session.Unlock()
 		
 	c.connection.Send(`{"command":"reload"}`)
 }

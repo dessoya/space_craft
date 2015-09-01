@@ -50,6 +50,7 @@ type FieldInfo struct {
 	ModelField string
 	CQLField string
 	Num int
+	Type r.Type
 	Zero interface{}
 }
 
@@ -77,7 +78,7 @@ func getModelInfo(val interface{}) *ModelInfo {
 		if tag == "" {
 			continue
 		}
-		info := FieldInfo{Num: i, ModelField: field.Name, CQLField: tag, Zero: r.Zero(v.Field(i).Type()).Interface() }
+		info := FieldInfo{Num: i, ModelField: field.Name, CQLField: tag, Type: v.Field(i).Type(), Zero: r.Zero(v.Field(i).Type()).Interface() }
 		fieldsMap[field.Name] = info
 		cqlMap[tag] = info
 	}
@@ -104,8 +105,8 @@ func (m *Model) Update(fields Fields) error {
 
 	val := r.Indirect(r.ValueOf(m.Child))
 
-	// logger.String(fmt.Sprintf("%+v", modelInfo))
-	// logger.String(fmt.Sprintf("%+v", fields))
+	logger.String(fmt.Sprintf("%+v", modelInfo))
+	logger.String(fmt.Sprintf("%+v", fields))
 
 	for key, value := range fields {
 		
@@ -144,6 +145,17 @@ func (m *Model) Update(fields Fields) error {
 				switch value.(type) {
 				case nil:
 					structField.Set(r.ValueOf(info.Zero))
+				case gocql.UUID:
+					logger.String(fmt.Sprintf("value gocql.UUID for key %s ", key))
+					switch info.Zero.(type) {
+					case *gocql.UUID:
+						logger.String(fmt.Sprintf("assign *gocql.UUID"))
+						v := value.(gocql.UUID)
+						structField.Set(r.ValueOf(&v))
+					default:
+						structField.Set(r.ValueOf(value))
+					}
+
 				default:
 					structField.Set(r.ValueOf(value))
 				}
@@ -164,10 +176,18 @@ func (m *Model) Update(fields Fields) error {
 			pair += "null"
 		case bool:
 			pair += fmt.Sprintf("%v", t)
+		case int:
+			pair += fmt.Sprintf("%v", t)
 		case string:
 			pair += "'" + t + "'"
 		case *gocql.UUID:
 			pair += t.String()
+		case []*gocql.UUID:
+			a := []string{}			
+			for _, uuid := range t {
+				a = append(a, uuid.String())
+			}
+			pair += "[" + strings.Join(a, ",") + "]"
 		case gocql.UUID:
 			pair += t.String()
 		default:
@@ -202,6 +222,8 @@ func (m *Model) Load() error {
 		return nil
 	}
 
+	logger.String(fmt.Sprintf("%+v", row))
+
 	m.IsLock			= row["lock"].(bool)
 	m.LockServerUUID	= row["lock_server_uuid"].(gocql.UUID)
 
@@ -215,7 +237,44 @@ func (m *Model) Load() error {
 		var structField r.Value
 		if info, ok := modelInfo.CQLFields[key]; ok {
 			structField = val.Field(info.Num)
-			structField.Set(r.ValueOf(value))
+
+			switch value.(type) {
+			case nil:
+				structField.Set(r.ValueOf(info.Zero))
+			case []gocql.UUID:
+				switch info.Zero.(type) {
+				case []*gocql.UUID:
+					v := value.([]gocql.UUID)
+					res := []*gocql.UUID{}
+					for _, item := range v {
+						res = append(res, &item)
+					}
+					structField.Set(r.ValueOf(res))
+				default:
+					structField.Set(r.ValueOf(value))
+				}
+
+			case gocql.UUID:
+				logger.String(fmt.Sprintf("value gocql.UUID for key %s ", key))
+				switch info.Zero.(type) {
+				case *gocql.UUID:
+					logger.String(fmt.Sprintf("assign *gocql.UUID"))
+					v := value.(gocql.UUID)
+					if v.String() == "00000000-0000-0000-0000-000000000000" {
+						// structField.Set(r.ValueOf(nil))
+						structField.Set(r.ValueOf(info.Zero))
+					} else {
+						structField.Set(r.ValueOf(&v))
+					}
+				default:
+					structField.Set(r.ValueOf(value))
+				}
+
+			default:
+				structField.Set(r.ValueOf(value))
+			}
+
+			// structField.Set(r.ValueOf(value))
 		}
 
 	}
@@ -245,4 +304,34 @@ func (m *Model) Unlock() {
 		"IsLock": nil,
 		"LockServerUUID": nil,
 	})
+}
+
+type ModelTreator interface {
+	Get(string) interface{}
+	New() interface{}
+}
+
+var Models = map[string]ModelTreator{}
+
+func Get(modelName string, UUID gocql.UUID) interface{} {
+
+	t, ok := Models[modelName]
+	if !ok {
+		return nil
+	}
+
+	o := (t.Get(UUID.String())).(*Model)
+	// o = o.(*Model)
+
+	if o == nil {
+		o = (t.New()).(*Model)
+		o.UUID = UUID
+		o.Load()
+		o.Lock()
+		if !o.Exists {
+			return nil
+		}
+	}
+
+	return o
 }

@@ -28,18 +28,29 @@ import (
 	module_config "sc/config"
 
 	"sc/model"
+	"sc/model2"
 
-	model_auth_session "sc/models/auth_session"
-	model_user "sc/models/user"
+	// model_player "sc/models/player"
+	// model_auth_session "sc/models/auth_session"
+	// model_user "sc/models/user"
 	model_server "sc/models/server"
+	model_live_planet "sc/models/live_planet"
+	model_building "sc/models/building"
 
 	cmd_auth "sc/ws/commands/auth"
 	cmd_logout "sc/ws/commands/logout"
 	cmd_set_section "sc/ws/commands/set_section"
+	cmd_start "sc/ws/commands/start"
+	cmd_get_planet "sc/ws/commands/get_planet"
 
 	cmd_session_lock_state "sc/ws/star_commands/session_lock_state"
 	cmd_user_lock_state "sc/ws/star_commands/get_user_lock_state"
 	cmd_user_logout "sc/ws/star_commands/star_user_logout"
+
+	// "sc/model2"
+	model2_player "sc/models2/player"
+	model2_auth_session "sc/models2/auth_session"
+	model2_user "sc/models2/user"
 )
 
 func goroutines() interface{} {
@@ -95,9 +106,42 @@ func main() {
     session, berr := cluster.CreateSession()
 
 
-    model_auth_session.Init(session)
-    model_user.Init(session)
+    // model2.InstallModels(model_player2.InstallInfo)
+
+    // m := model2.New("player")
+    // uuid, err := gocql.ParseUUID("dda8d8db-46af-11e5-9e40-00ff0a8c5316")
+    // m := model_player2.Load(uuid)
+
+    // m := model2.Load("player", UUID)
+    // m := model2.Get("player", UUID)
+    // m.Lock()
+    // m.Unlock()
+   
+    // logger.String(fmt.Sprintf("%+v", m.Fields))
+    // logger.String(fmt.Sprintf("%+v", m.Get("UserUUID")))
+
+
+    model2_auth_session.Init(session)
+	model2_player.Init(session)
+	model2_user.Init(session)
+
+/*
+    uuid, _ := gocql.ParseUUID("dda8d8db-46af-11e5-9e40-00ff0a8c5316")
+
+    m, e2 := model2_player.Load(uuid)
+	logger.String(fmt.Sprintf("%+v", m))
+	logger.String(fmt.Sprintf("%+v", e2))
+
+    m, e2 = model2_player.Get(uuid)
+	logger.String(fmt.Sprintf("%+v", m))
+	logger.String(fmt.Sprintf("%+v", e2))
+*/
+    // model_auth_session.Init(session)
+    // model_player.Init(session)
+    // model_user.Init(session)
     model_server.Init(session)
+    model_live_planet.Init(session)
+    model_building.Init(session)
 
 
 
@@ -119,6 +163,9 @@ func main() {
 	connectionFactory.InstallCommand("auth", cmd_auth.Generator)
 	connectionFactory.InstallCommand("logout", cmd_logout.Generator)
 	connectionFactory.InstallCommand("set_section", cmd_set_section.Generator)
+	connectionFactory.InstallCommand("start", cmd_start.Generator)	
+	connectionFactory.InstallCommand("get_planet", cmd_get_planet.Generator)	
+
 
 	// star commands
 	connectionFactory.InstallCommand("get_session_lock_state", cmd_session_lock_state.Generator)
@@ -202,14 +249,24 @@ func main() {
 
 		// logger.String(string(body))		
 
-		session_uuid := r.URL.Query().Get("session_uuid")
-		logger.String("session_uuid " + session_uuid)
+		sessionUUID, err := gocql.ParseUUID(r.URL.Query().Get("session_uuid"))
+		if err != nil {
+			http.Redirect(w, r, "/", http.StatusMovedPermanently)
+			return
+		}
 
-		session := model_auth_session.LoadOrCreateSession(session_uuid, "", r.Header["User-Agent"][0])
+
+		session, err := model2_auth_session.Get(sessionUUID)
+		if err != nil || session == nil {
+			http.Redirect(w, r, "/", http.StatusMovedPermanently)
+			return
+		}
+
+		// session := model_auth_session.LoadOrCreateSession(session_uuid, "", r.Header["User-Agent"][0])
 
 		method := r.URL.Query().Get("method")
 		unique := r.URL.Query().Get("unique")
-		user, _ := model_user.GetByMethod(method, unique)
+		user, _ := model2_user.GetByMethod(method, unique)
 
 		if session.IsAuth {
 
@@ -226,8 +283,8 @@ func main() {
 
 			// loging
 			if !user.Exists {
-				user.Create()
-				user.Update(model.Fields{
+				user, _ = model2_user.Create()
+				user.Update(model2.Fields{
 					"Name": r.URL.Query().Get("username"),
 				})
 				user.AddMethod(method, unique)
@@ -235,7 +292,7 @@ func main() {
 
 		}
 
-		session.Update(model.Fields{
+		session.Update(model2.Fields{
 			"IsAuth": true,
 			"UserUUID": user.UUID,
 			"AuthMethod": method,

@@ -1,0 +1,23 @@
+
+package auth_session
+
+import(
+	"github.com/gocql/gocql"
+	"sync"
+	"fmt"
+	"strings"
+	model "sc/model2"
+	"sc/logger"
+	"sc/errors"
+)
+
+var TableName		= "auth_sessions"
+var UUIDFieldName	= "session_uuid"
+
+type Fields struct {
+	IsAuth			bool			`cql:"is_auth"`
+	AuthMethod		string			`cql:"auth_method"`
+	UserUUID		gocql.UUID		`cql:"user_uuid"`
+	RemoteAddr		string			`cql:"remote_addr"`
+	UserAgent		string			`cql:"user_agent"`
+}

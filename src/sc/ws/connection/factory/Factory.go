@@ -12,7 +12,7 @@ import (
 	"sc/logger"
 	"sc/errors"
 
-	model_user "sc/models/user"
+	// model2_user "sc/models2/user"
 )
 
 type DebugInfo struct {
@@ -150,6 +150,7 @@ func (f *Factory) MakeDebugInfo () map[string]interface{} {
 	}
 	f.mutex.Unlock()
 
+/*
 	for _, user := range model_user.Users {
 
 		c := map[string]interface{}{}
@@ -160,7 +161,7 @@ func (f *Factory) MakeDebugInfo () map[string]interface{} {
 		item[user.UUID.String()] = c
 
 	}
-
+*/
 	return di
 }
 

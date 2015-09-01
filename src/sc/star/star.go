@@ -17,7 +17,7 @@ import (
 	"sc/errors"
 	"sc/ws/command"
 
-	model_auth_session "sc/models/auth_session"
+	model2_auth_session "sc/models2/auth_session"
 	model_server "sc/models/server"
 )
 
@@ -96,11 +96,11 @@ func (l *LocalConnection) Send(message string) {
 
 }
 
-func (l *LocalConnection) SetSession (session *model_auth_session.Session) {
+func (l *LocalConnection) SetSession (session *model2_auth_session.Fields) {
 
 }
 
-func (l *LocalConnection) GetSession () *model_auth_session.Session {
+func (l *LocalConnection) GetSession () *model2_auth_session.Fields {
 	return nil
 }
 

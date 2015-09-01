@@ -3,7 +3,7 @@ package command
 
 import (
 	"github.com/gocql/gocql"
-	model_auth_session "sc/models/auth_session"
+	model2_auth_session "sc/models2/auth_session"
 	"sc/config"
 	// "sc/ws/connection/factory"
 )
@@ -15,8 +15,8 @@ type Command interface {
 type Connection interface {
 	Send(string)
 
-	SetSession (session *model_auth_session.Session)
-	GetSession () *model_auth_session.Session
+	SetSession (session *model2_auth_session.Fields)
+	GetSession () *model2_auth_session.Fields
 	
 	SetServerAuthState ()
 	GetServerAuthState () bool

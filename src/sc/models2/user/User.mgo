@@ -1,0 +1,66 @@
+
+package user
+
+import(
+	"crypto/md5"
+	"io"
+	"github.com/gocql/gocql"
+	"sync"
+	"fmt"
+	"strings"
+	model "sc/model2"
+	"sc/logger"
+	"sc/errors"
+)
+
+var TableName		= "users"
+var UUIDFieldName	= "user_uuid"
+
+type Fields struct {
+	Name		string		`cql:"username"`
+	SectionName	string		`cql:"section"`
+	PlayerUUID	*gocql.UUID	`cql:"player_uuid"`
+}
+
+func GetMethodUUID(method string, unique string) gocql.UUID {
+
+	h := md5.New()
+	io.WriteString(h, method)
+	io.WriteString(h, unique)
+	methodUUID, _ := gocql.UUIDFromBytes(h.Sum(nil))
+
+	return methodUUID
+}
+
+
+func (u *Fields) AddMethod(method string, unique string) error {
+
+	methodUUID := GetMethodUUID(method, unique)
+
+	if err := CQLSession.Query(`insert into idx_users_method_uuid (method, method_uuid, user_uuid) values (?,?,?)`, method, methodUUID, u.UUID).Exec(); err != nil {	
+		logger.Error(errors.New(err))
+		return err
+	}
+
+	return nil
+}
+
+func GetByMethod(method string, unique string) (*Fields, error) {
+
+	methodUUID := GetMethodUUID(method, unique)
+	f := &Fields{ }
+
+	var row = model.Fields{}
+	if err := CQLSession.Query(`SELECT * FROM idx_users_method_uuid where method = ? and method_uuid = ?`, method, methodUUID).MapScan(row); err != nil {
+		if err != gocql.ErrNotFound {
+			logger.Error(errors.New(err))
+		}
+
+		return u, nil
+	}
+
+	u.UUID = row["user_uuid"].(gocql.UUID)
+	err := u.Load()
+
+	return u, err
+}

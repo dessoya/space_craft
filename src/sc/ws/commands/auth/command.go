@@ -13,10 +13,12 @@ import (
 	"sc/logger"
 	"sc/errors"
 
-	model_auth_session "sc/models/auth_session"
-	model_user "sc/models/user"
+	// model_auth_session "sc/models/auth_session"
+	model2_auth_session "sc/models2/auth_session"
+	model2_user "sc/models2/user"
 	model_server "sc/models/server"
 	"sc/model"
+	"sc/model2"
 
 	"sc/star"
 )
@@ -45,7 +47,8 @@ type SendCommandAuth struct {
 	SessionUUID		string		`json:"session_uuid"`
 	IsAuth			bool		`json:"is_auth"`
 	AuthMethods		[]string	`json:"auth_methods"`
-	User			SendCommandAuthUser `json:"user"`	
+	User			SendCommandAuthUser `json:"user"`
+	PlayerExists	bool		`json:"player_exists"`
 }
 
 func (c *Command) Execute(message []byte) {
@@ -71,7 +74,29 @@ func (c *Command) Execute(message []byte) {
 
 	
 	// ---------------
-	session := model_auth_session.LoadOrCreateSession(commandDetector.SessionUUID, c.connection.GetRemoteAddr(), c.connection.GetUserAgent())
+	var session *model2_auth_session.Fields
+
+	sessionUUID, err := gocql.ParseUUID(commandDetector.SessionUUID)
+	if err == nil {
+		session, err = model2_auth_session.Load(sessionUUID)
+		if session != nil {
+			if session.Exists {
+				if session.RemoteAddr != c.connection.GetRemoteAddr() || session.UserAgent != c.connection.GetUserAgent() {
+					session = nil
+				}
+			} else {
+				session = nil
+			}
+		}
+	}
+
+	if err != nil || session == nil {
+		session, err = model2_auth_session.Create()
+		session.Update(model2.Fields{
+			"RemoteAddr": c.connection.GetRemoteAddr(),
+			"UserAgent": c.connection.GetUserAgent(),
+		})
+	}
 
 	if session.IsLock {
 		b, err := star.Send(session.LockServerUUID, model.Fields{
@@ -85,13 +110,18 @@ func (c *Command) Execute(message []byte) {
 		}
 
 		if err != nil || commandCheckSessionDetector.IsLock {
-			session.Create(c.connection.GetRemoteAddr(), c.connection.GetUserAgent())
+			// session.Create(c.connection.GetRemoteAddr(), c.connection.GetUserAgent())
+			session, err = model2_auth_session.Create()
+			session.Update(model2.Fields{
+				"RemoteAddr": c.connection.GetRemoteAddr(),
+				"UserAgent": c.connection.GetUserAgent(),
+			})
 		}
 
 		logger.String(string(b))
 	}
 
-	session.Lock()
+	// session.Lock()
 	c.connection.SetSession(session)
 
 	sendCommandAuth := SendCommandAuth{
@@ -99,6 +129,7 @@ func (c *Command) Execute(message []byte) {
 		SessionUUID:		session.UUID.String(),
 		AuthMethods:		c.ctx.Config.Auth.Methods,
 		IsAuth:				session.IsAuth,
+		PlayerExists:		false,
 	}
 
 	if session.IsAuth {
@@ -142,12 +173,14 @@ func (c *Command) Execute(message []byte) {
 
 		user.Lock()
 
-		// if user.Exists {
-			sendCommandAuth.User = SendCommandAuthUser{
-				Name: user.Name,
-				SectionName: user.SectionName,
-			}
-		// }
+		if user.PlayerUUID != nil {
+			sendCommandAuth.PlayerExists = true
+		}
+
+		sendCommandAuth.User = SendCommandAuthUser{
+			Name: user.Name,
+			SectionName: user.SectionName,
+		}
 	}
 
 	b, err := json.Marshal(sendCommandAuth)
