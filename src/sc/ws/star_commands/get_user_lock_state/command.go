@@ -2,10 +2,11 @@
 package get_user_lock_state
 
 import (	
+	"github.com/gocql/gocql"
 	"sc/ws/command"
 	// "sc/ws/connection"
 	"encoding/json"	
-	model_user "sc/models/user"
+	model_user "sc/models2/user"
 
 	"fmt"
 	"sc/logger"
@@ -32,11 +33,18 @@ func (c *Command) Execute(message []byte) {
 
 	var isLock bool = false
 
-	user := model_user.Get(commandDetector.UserUUID)
-	logger.String(fmt.Sprintf("commandDetector.UserUUID %+v, user %+v", commandDetector.UserUUID, user))
-	if user != nil && user.IsLock {
-		isLock = true
-	}	
+	userUUID, err := gocql.ParseUUID(commandDetector.UserUUID)
+	if err != nil {
+
+
+	} else {
+
+		user, err := model_user.Get(userUUID)
+		logger.String(fmt.Sprintf("commandDetector.UserUUID %+v, user %+v", commandDetector.UserUUID, user))
+		if err == nil && user != nil && user.IsLock {
+			isLock = true
+		}	
+	}
 
 	b, _ := json.Marshal(map[string]interface{}{
 		"command": "answer",

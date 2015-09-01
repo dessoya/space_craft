@@ -33,9 +33,9 @@ import (
 	// model_player "sc/models/player"
 	// model_auth_session "sc/models/auth_session"
 	// model_user "sc/models/user"
+	// model_live_planet "sc/models/live_planet"
+	// model_building "sc/models/building"
 	model_server "sc/models/server"
-	model_live_planet "sc/models/live_planet"
-	model_building "sc/models/building"
 
 	cmd_auth "sc/ws/commands/auth"
 	cmd_logout "sc/ws/commands/logout"
@@ -48,9 +48,13 @@ import (
 	cmd_user_logout "sc/ws/star_commands/star_user_logout"
 
 	// "sc/model2"
-	model2_player "sc/models2/player"
-	model2_auth_session "sc/models2/auth_session"
-	model2_user "sc/models2/user"
+	model2_player			"sc/models2/player"
+	model2_auth_session		"sc/models2/auth_session"
+	model2_user				"sc/models2/user"
+	model2_live_planet		"sc/models2/live_planet"
+	model2_building			"sc/models2/building"
+	// model2_server			"sc/models2/server"
+
 )
 
 func goroutines() interface{} {
@@ -121,9 +125,36 @@ func main() {
     // logger.String(fmt.Sprintf("%+v", m.Get("UserUUID")))
 
 
+    model_server.Init(session)
+    ip, t := localIP()
+    if t != nil {
+    	logger.Error(errors.New(t))
+    	os.Exit(0)
+    }
+
+    server := model_server.New(ip, config.Http.Port)
+    model.Init(server.UUID, session)
+
+    server.StartUpdater()
+    star.SetLocalServer(server)
+
+
+    /*
     model2_auth_session.Init(session)
 	model2_player.Init(session)
 	model2_user.Init(session)
+	model2_live_planet.Init(session)
+	model2_building.Init(session)
+	*/
+
+    model2.InstallModels(server.UUID,
+    	model2_auth_session.InstallInfo,
+    	model2_user.InstallInfo,
+    	model2_live_planet.InstallInfo,
+    	model2_building.InstallInfo,
+    	model2_player.InstallInfo)
+
+	// model2_server.Init(session)
 
 /*
     uuid, _ := gocql.ParseUUID("dda8d8db-46af-11e5-9e40-00ff0a8c5316")
@@ -139,23 +170,8 @@ func main() {
     // model_auth_session.Init(session)
     // model_player.Init(session)
     // model_user.Init(session)
-    model_server.Init(session)
-    model_live_planet.Init(session)
-    model_building.Init(session)
-
-
-
-    ip, t := localIP()
-    if t != nil {
-    	logger.Error(errors.New(t))
-    	os.Exit(0)
-    }
-
-    server := model_server.New(ip, config.Http.Port)
-    model.Init(server.UUID, session)
-
-    server.StartUpdater()
-    star.SetLocalServer(server)
+    //model_live_planet.Init(session)
+    //model_building.Init(session)
 
 	var connectionFactory = factory.New()
 

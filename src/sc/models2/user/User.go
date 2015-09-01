@@ -107,7 +107,9 @@ func (m *Fields) Load() (error) {
 	m.Name = row["username"].(string)
 	m.SectionName = row["section"].(string)
 	v6 := row["player_uuid"].(gocql.UUID)
-	m.PlayerUUID = &v6
+	logger.String(fmt.Sprintf("PlayerUUID: %+v", v6))
+	if v6.String() == "00000000-0000-0000-0000-000000000000" { m.PlayerUUID = nil
+	} else { m.PlayerUUID = &v6}
 
 	return nil
 }
@@ -166,6 +168,27 @@ func Get(UUID gocql.UUID) (*Fields, error) {
 	}
 
 	return m, nil
+
+}
+
+func (m *Fields) Lock() (error) {
+
+    uuid := m.UUID.String()
+    mutex.Lock()
+	m, ok := Models[uuid]
+	if ok {
+	    mutex.Unlock()
+		return m.Load()
+	} else {
+		Models[uuid] = m
+	    mutex.Unlock()
+	    m.Update(model.Fields{
+	    	"IsLock": true,
+	    	"LockServerUUID": LockServerUUID,
+	    })
+	}
+
+	return nil
 
 }
 
@@ -230,7 +253,14 @@ func (m *Fields) Update(fields model.Fields) error {
 			m.SectionName = value.(string)
 			}
 		case "PlayerUUID":
+			switch t := value.(type) {
+			case nil:
+			m.PlayerUUID = nil
+			case gocql.UUID:
+			m.PlayerUUID = &t
+			default:
 			m.PlayerUUID = value.(*gocql.UUID)
+			}
 		}
 		var pair = Field2CQL[key] + "="
 		switch t := value.(type) {

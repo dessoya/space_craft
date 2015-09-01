@@ -1,0 +1,23 @@
+
+package building
+
+import(
+	"github.com/gocql/gocql"
+	"sync"
+	"fmt"
+	"strings"
+	model "sc/model2"
+	"sc/logger"
+	"sc/errors"
+)
+
+var TableName		= "buildings"
+var UUIDFieldName	= "building_uuid"
+
+type Fields struct {
+	Type	string	`cql:"type"`
+	Level	int		`cql:"level"`
+	TurnOn	bool	`cql:"turn_on"`
+	X		int		`cql:"x"`
+	Y		int		`cql:"y"`
+}

@@ -47,7 +47,7 @@ func (c *Command) Execute(message []byte) {
 
 	func () {
 
-		user := model_user.Get(session.UserUUID.String())
+		user, _ := model_user.Get(session.UserUUID)
 		if user == nil {
 			return
 		}

@@ -48,7 +48,7 @@ func (u *Fields) AddMethod(method string, unique string) error {
 func GetByMethod(method string, unique string) (*Fields, error) {
 
 	methodUUID := GetMethodUUID(method, unique)
-	f := &Fields{ }
+	u := &Fields{ }
 
 	var row = model.Fields{}
 	if err := CQLSession.Query(`SELECT * FROM idx_users_method_uuid where method = ? and method_uuid = ?`, method, methodUUID).MapScan(row); err != nil {

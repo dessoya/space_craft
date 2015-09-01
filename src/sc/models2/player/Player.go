@@ -123,6 +123,27 @@ func Get(UUID gocql.UUID) (*Fields, error) {
 
 }
 
+func (m *Fields) Lock() (error) {
+
+    uuid := m.UUID.String()
+    mutex.Lock()
+	m, ok := Models[uuid]
+	if ok {
+	    mutex.Unlock()
+		return m.Load()
+	} else {
+		Models[uuid] = m
+	    mutex.Unlock()
+	    m.Update(model.Fields{
+	    	"IsLock": true,
+	    	"LockServerUUID": LockServerUUID,
+	    })
+	}
+
+	return nil
+
+}
+
 func (m *Fields) Unlock() error {
 
     uuid := m.UUID.String()

@@ -1,5 +1,5 @@
 
-package auth_session
+package building
 
 import(
 	"github.com/gocql/gocql"
@@ -11,30 +11,30 @@ import(
 	"sc/errors"
 )
 
-var TableName		= "auth_sessions"
-var UUIDFieldName	= "session_uuid"
+var TableName		= "buildings"
+var UUIDFieldName	= "building_uuid"
 
 type Fields struct {
-	UUID			gocql.UUID	`cql:"session_uuid"`
+	UUID			gocql.UUID	`cql:"building_uuid"`
 	Exists			bool
 	IsLock			bool		`cql:"lock"`
 	LockServerUUID	gocql.UUID	`cql:"lock_server_uuid"`
-	IsAuth			bool		`cql:"is_auth"`
-	AuthMethod		string		`cql:"auth_method"`
-	UserUUID		gocql.UUID	`cql:"user_uuid"`
-	RemoteAddr		string		`cql:"remote_addr"`
-	UserAgent		string		`cql:"user_agent"`
+	Type			string		`cql:"type"`
+	Level			int			`cql:"level"`
+	TurnOn			bool		`cql:"turn_on"`
+	X				int			`cql:"x"`
+	Y				int			`cql:"y"`
 }
 
 var Field2CQL = map[string]string{
-	"UUID": "session_uuid",
+	"UUID": "building_uuid",
 	"IsLock": "lock",
 	"LockServerUUID": "lock_server_uuid",
-	"IsAuth": "is_auth",
-	"AuthMethod": "auth_method",
-	"UserUUID": "user_uuid",
-	"RemoteAddr": "remote_addr",
-	"UserAgent": "user_agent",
+	"Type": "type",
+	"Level": "level",
+	"TurnOn": "turn_on",
+	"X": "x",
+	"Y": "y",
 }
 
 var LockServerUUID gocql.UUID
@@ -55,19 +55,19 @@ func (m *Fields) Load() (error) {
 	m.Exists = false
 	var row = map[string]interface{}{}
 
-	if err := CQLSession.Query(`SELECT * FROM auth_sessions where session_uuid = ?`, m.UUID).MapScan(row); err != nil {
+	if err := CQLSession.Query(`SELECT * FROM buildings where building_uuid = ?`, m.UUID).MapScan(row); err != nil {
 		return err
 	}
 	m.Exists = true
 
-	m.UUID = row["session_uuid"].(gocql.UUID)
+	m.UUID = row["building_uuid"].(gocql.UUID)
 	m.IsLock = row["lock"].(bool)
 	m.LockServerUUID = row["lock_server_uuid"].(gocql.UUID)
-	m.IsAuth = row["is_auth"].(bool)
-	m.AuthMethod = row["auth_method"].(string)
-	m.UserUUID = row["user_uuid"].(gocql.UUID)
-	m.RemoteAddr = row["remote_addr"].(string)
-	m.UserAgent = row["user_agent"].(string)
+	m.Type = row["type"].(string)
+	m.Level = row["level"].(int)
+	m.TurnOn = row["turn_on"].(bool)
+	m.X = row["x"].(int)
+	m.Y = row["y"].(int)
 
 	return nil
 }
@@ -82,7 +82,7 @@ func Create() (*Fields, error) {
 		}
 		var row = map[string]interface{}{}
 		var apply bool
-		if apply, err = CQLSession.Query(`insert into auth_sessions (session_uuid,create_time) values (?,now()) if not exists`, m.UUID).MapScanCAS(row); err != nil {
+		if apply, err = CQLSession.Query(`insert into buildings (building_uuid,create_time) values (?,now()) if not exists`, m.UUID).MapScanCAS(row); err != nil {
 			logger.Error(errors.New(err))
 			return nil, err
 		}
@@ -196,41 +196,26 @@ func (m *Fields) Update(fields model.Fields) error {
 			default:
 			m.LockServerUUID = value.(gocql.UUID)
 			}
-		case "IsAuth":
+		case "Type":
 			switch value.(type) {
 			case nil:
-			m.IsAuth = false
+			m.Type = ""
 			default:
-			m.IsAuth = value.(bool)
+			m.Type = value.(string)
 			}
-		case "AuthMethod":
+		case "Level":
+			m.Level = value.(int)
+		case "TurnOn":
 			switch value.(type) {
 			case nil:
-			m.AuthMethod = ""
+			m.TurnOn = false
 			default:
-			m.AuthMethod = value.(string)
+			m.TurnOn = value.(bool)
 			}
-		case "UserUUID":
-			switch value.(type) {
-			case nil:
-			m.UserUUID = gocql.UUID{}
-			default:
-			m.UserUUID = value.(gocql.UUID)
-			}
-		case "RemoteAddr":
-			switch value.(type) {
-			case nil:
-			m.RemoteAddr = ""
-			default:
-			m.RemoteAddr = value.(string)
-			}
-		case "UserAgent":
-			switch value.(type) {
-			case nil:
-			m.UserAgent = ""
-			default:
-			m.UserAgent = value.(string)
-			}
+		case "X":
+			m.X = value.(int)
+		case "Y":
+			m.Y = value.(int)
 		}
 		var pair = Field2CQL[key] + "="
 		switch t := value.(type) {
@@ -263,7 +248,7 @@ func (m *Fields) Update(fields model.Fields) error {
 		}
 		pairs = append(pairs, pair)
 	}
-	q := "update auth_sessions set " + strings.Join(pairs, ",") + " where session_uuid = " + m.UUID.String()
+	q := "update buildings set " + strings.Join(pairs, ",") + " where building_uuid = " + m.UUID.String()
 	logger.String(q)
 
 	if err := CQLSession.Query(q).Exec(); err != nil {

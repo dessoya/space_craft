@@ -97,7 +97,9 @@ a += '\
 		switch(f.type) {
 		case '*gocql.UUID':
 		    a += '	v' + i + ' := row["' + cqlname + '"].(gocql.UUID)\n'
-			a += '	m.' + f.name + ' = &v' + i + '\n'
+		    a += '	logger.String(fmt.Sprintf("' + f.name + ': %+v", v' + i + '))\n'
+		    a += '	if v' + i + '.String() == "00000000-0000-0000-0000-000000000000" { m.' + f.name + ' = nil\n'
+			a += '	} else { m.' + f.name + ' = &v' + i + '}\n'
 
 		break
 		default:
@@ -165,7 +167,30 @@ func Get(UUID gocql.UUID) (*Fields, error) {\n\
 \n\
 	return m, nil\n\
 \n\
-}\n\
+}\n'
+	a += '\
+\n\
+func (m *Fields) Lock() (error) {\n\
+\n\
+    uuid := m.UUID.String()\n\
+    mutex.Lock()\n\
+	m, ok := Models[uuid]\n\
+	if ok {\n\
+	    mutex.Unlock()\n\
+		return m.Load()\n\
+	} else {\n\
+		Models[uuid] = m\n\
+	    mutex.Unlock()\n\
+	    m.Update(model.Fields{\n\
+	    	"IsLock": true,\n\
+	    	"LockServerUUID": LockServerUUID,\n\
+	    })\n\
+	}\n\
+\n\
+	return nil\n\
+\n\
+}\n'
+	a += '\
 \n\
 func (m *Fields) Unlock() error {\n\
 \n\
@@ -202,6 +227,18 @@ func (m *Fields) Update(fields model.Fields) error {\n\
 
 		a += '		case "' + f.name + '":\n'
 		switch(f.type) {
+		case "*gocql.UUID":
+			// a += '			switch t := value.(type) {\n'
+			a += '			switch t := value.(type) {\n'
+			a += '			case nil:\n'
+			a += '			m.' + f.name + ' = nil\n'
+			a += '			case gocql.UUID:\n'
+			a += '			m.' + f.name + ' = &t\n'
+			a += '			default:\n'
+			a += '			m.' + f.name + ' = value.(' + f.type + ')\n'
+			a += '			}\n'
+			break
+
 		case "gocql.UUID":
 			// a += '			switch t := value.(type) {\n'
 			a += '			switch value.(type) {\n'

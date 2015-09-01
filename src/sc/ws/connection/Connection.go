@@ -154,7 +154,7 @@ func (c *Connection) Reading() {
 
 	if c.SessionExists {
 		if c.Session.IsAuth {
-			user := model_user.Get(c.Session.UserUUID)
+			user, _ := model2_user.Get(c.Session.UserUUID)
 			if user != nil {
 				user.Unlock()
 			}			
@@ -169,7 +169,7 @@ func (c *Connection) UnAuth() {
 
 	if c.SessionExists && c.Session.IsAuth {
 
-		user := model_user.Get(c.Session.UserUUID.String())
+		user, _ := model2_user.Get(c.Session.UserUUID)
 		if user != nil {
 			user.Unlock()
 		}

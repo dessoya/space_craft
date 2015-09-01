@@ -1,0 +1,20 @@
+
+package live_planet
+
+import(
+	"github.com/gocql/gocql"
+	"sync"
+	"fmt"
+	"strings"
+	model "sc/model2"
+	"sc/logger"
+	"sc/errors"
+)
+
+var TableName		= "live_planets"
+var UUIDFieldName	= "planet_uuid"
+
+type Fields struct {
+	PlayerUUID		gocql.UUID		`cql:"owner_player_uuid"`	
+	Buildings		[]gocql.UUID	`cql:"buildings_list"`	
+}

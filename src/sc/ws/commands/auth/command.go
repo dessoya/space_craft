@@ -5,6 +5,7 @@ import (
 	
 	// "sc/logger"
 	// "sc/error"
+	"fmt"
 
 	"github.com/gocql/gocql"
 	"encoding/json"
@@ -134,9 +135,13 @@ func (c *Command) Execute(message []byte) {
 
 	if session.IsAuth {
 
-		user := model_user.New()
+		/*
+		user := model2_user.New()
 		user.UUID = session.UserUUID
 		user.Load()
+		*/
+		user, _ := model2_user.Load(session.UserUUID)
+		logger.String(fmt.Sprintf("user: %+v", user))
 
 		// check for user lock
 		if user.IsLock {
@@ -171,7 +176,7 @@ func (c *Command) Execute(message []byte) {
 			}
 		}
 
-		user.Lock()
+		// user.Lock()
 
 		if user.PlayerUUID != nil {
 			sendCommandAuth.PlayerExists = true

@@ -1,5 +1,5 @@
 
-package auth_session
+package live_planet
 
 import(
 	"github.com/gocql/gocql"
@@ -11,30 +11,24 @@ import(
 	"sc/errors"
 )
 
-var TableName		= "auth_sessions"
-var UUIDFieldName	= "session_uuid"
+var TableName		= "live_planets"
+var UUIDFieldName	= "planet_uuid"
 
 type Fields struct {
-	UUID			gocql.UUID	`cql:"session_uuid"`
+	UUID			gocql.UUID		`cql:"planet_uuid"`
 	Exists			bool
-	IsLock			bool		`cql:"lock"`
-	LockServerUUID	gocql.UUID	`cql:"lock_server_uuid"`
-	IsAuth			bool		`cql:"is_auth"`
-	AuthMethod		string		`cql:"auth_method"`
-	UserUUID		gocql.UUID	`cql:"user_uuid"`
-	RemoteAddr		string		`cql:"remote_addr"`
-	UserAgent		string		`cql:"user_agent"`
+	IsLock			bool			`cql:"lock"`
+	LockServerUUID	gocql.UUID		`cql:"lock_server_uuid"`
+	PlayerUUID		gocql.UUID		`cql:"owner_player_uuid"`
+	Buildings		[]gocql.UUID	`cql:"buildings_list"`
 }
 
 var Field2CQL = map[string]string{
-	"UUID": "session_uuid",
+	"UUID": "planet_uuid",
 	"IsLock": "lock",
 	"LockServerUUID": "lock_server_uuid",
-	"IsAuth": "is_auth",
-	"AuthMethod": "auth_method",
-	"UserUUID": "user_uuid",
-	"RemoteAddr": "remote_addr",
-	"UserAgent": "user_agent",
+	"PlayerUUID": "owner_player_uuid",
+	"Buildings": "buildings_list",
 }
 
 var LockServerUUID gocql.UUID
@@ -55,19 +49,16 @@ func (m *Fields) Load() (error) {
 	m.Exists = false
 	var row = map[string]interface{}{}
 
-	if err := CQLSession.Query(`SELECT * FROM auth_sessions where session_uuid = ?`, m.UUID).MapScan(row); err != nil {
+	if err := CQLSession.Query(`SELECT * FROM live_planets where planet_uuid = ?`, m.UUID).MapScan(row); err != nil {
 		return err
 	}
 	m.Exists = true
 
-	m.UUID = row["session_uuid"].(gocql.UUID)
+	m.UUID = row["planet_uuid"].(gocql.UUID)
 	m.IsLock = row["lock"].(bool)
 	m.LockServerUUID = row["lock_server_uuid"].(gocql.UUID)
-	m.IsAuth = row["is_auth"].(bool)
-	m.AuthMethod = row["auth_method"].(string)
-	m.UserUUID = row["user_uuid"].(gocql.UUID)
-	m.RemoteAddr = row["remote_addr"].(string)
-	m.UserAgent = row["user_agent"].(string)
+	m.PlayerUUID = row["owner_player_uuid"].(gocql.UUID)
+	m.Buildings = row["buildings_list"].([]gocql.UUID)
 
 	return nil
 }
@@ -82,7 +73,7 @@ func Create() (*Fields, error) {
 		}
 		var row = map[string]interface{}{}
 		var apply bool
-		if apply, err = CQLSession.Query(`insert into auth_sessions (session_uuid,create_time) values (?,now()) if not exists`, m.UUID).MapScanCAS(row); err != nil {
+		if apply, err = CQLSession.Query(`insert into live_planets (planet_uuid,create_time) values (?,now()) if not exists`, m.UUID).MapScanCAS(row); err != nil {
 			logger.Error(errors.New(err))
 			return nil, err
 		}
@@ -196,41 +187,15 @@ func (m *Fields) Update(fields model.Fields) error {
 			default:
 			m.LockServerUUID = value.(gocql.UUID)
 			}
-		case "IsAuth":
+		case "PlayerUUID":
 			switch value.(type) {
 			case nil:
-			m.IsAuth = false
+			m.PlayerUUID = gocql.UUID{}
 			default:
-			m.IsAuth = value.(bool)
+			m.PlayerUUID = value.(gocql.UUID)
 			}
-		case "AuthMethod":
-			switch value.(type) {
-			case nil:
-			m.AuthMethod = ""
-			default:
-			m.AuthMethod = value.(string)
-			}
-		case "UserUUID":
-			switch value.(type) {
-			case nil:
-			m.UserUUID = gocql.UUID{}
-			default:
-			m.UserUUID = value.(gocql.UUID)
-			}
-		case "RemoteAddr":
-			switch value.(type) {
-			case nil:
-			m.RemoteAddr = ""
-			default:
-			m.RemoteAddr = value.(string)
-			}
-		case "UserAgent":
-			switch value.(type) {
-			case nil:
-			m.UserAgent = ""
-			default:
-			m.UserAgent = value.(string)
-			}
+		case "Buildings":
+			m.Buildings = value.([]gocql.UUID)
 		}
 		var pair = Field2CQL[key] + "="
 		switch t := value.(type) {
@@ -263,7 +228,7 @@ func (m *Fields) Update(fields model.Fields) error {
 		}
 		pairs = append(pairs, pair)
 	}
-	q := "update auth_sessions set " + strings.Join(pairs, ",") + " where session_uuid = " + m.UUID.String()
+	q := "update live_planets set " + strings.Join(pairs, ",") + " where planet_uuid = " + m.UUID.String()
 	logger.String(q)
 
 	if err := CQLSession.Query(q).Exec(); err != nil {

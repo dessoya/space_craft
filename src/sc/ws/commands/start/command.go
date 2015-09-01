@@ -4,7 +4,7 @@ package start
 import (
 	"sc/ws/command"
 	// "sc/ws/connection"
-	"sc/model"
+	// "sc/model"
 	"sc/model2"
 	"github.com/gocql/gocql"
 
@@ -14,8 +14,8 @@ import (
 
 	model_user "sc/models2/user"
 	model_player "sc/models2/player"
-	model_live_planet "sc/models/live_planet"
-	model_building "sc/models/building"
+	model_live_planet "sc/models2/live_planet"
+	model_building "sc/models2/building"
 	// "sc/logger"
 
 )
@@ -41,7 +41,7 @@ func (c *Command) Execute(message []byte) {
 	var commandDetector CommandDetector
 	json.Unmarshal(message, &commandDetector)
 
-	user := model_user.Get(session.UserUUID.String())
+	user, _ := model_user.Get(session.UserUUID)
 	if user == nil {
 		return
 	}
@@ -58,24 +58,30 @@ func (c *Command) Execute(message []byte) {
 		"UserUUID": user.UUID,
 	})
 
-	user.Update(model.Fields{
+	user.Update(model2.Fields{
 		"PlayerUUID": player.UUID,
 	})
 
 	// create live planet
 
+	/*
 	livePlanet := model_live_planet.New()
 	livePlanet.Create()
+	*/
+	livePlanet, _ := model_live_planet.Create()
 
 	player.Update(model2.Fields{
 		"CapitalPlanetUUID": livePlanet.UUID,
 		"Planets": []gocql.UUID{ livePlanet.UUID },
 	})
 
+	/*
 	building := model_building.New()
 	building.Create()
+	*/
+	building, _ := model_building.Create()
 
-	building.Update(model.Fields{
+	building.Update(model2.Fields{
 		"Type": "capital",
 		"Level": 1,
 		"TurnOn": true,
@@ -83,9 +89,9 @@ func (c *Command) Execute(message []byte) {
 		"Y": 0,
 	})
 
-	livePlanet.Update(model.Fields{
+	livePlanet.Update(model2.Fields{
 		"PlayerUUID": player.UUID,
-		"Buildings": []*gocql.UUID{ &building.UUID },
+		"Buildings": []gocql.UUID{ building.UUID },
 	})
 
 
