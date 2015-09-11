@@ -21,3 +21,17 @@ type Fields struct {
 	X		int		`cql:"x"`
 	Y		int		`cql:"y"`
 }
+
+func (b *Fields) MakeClientInfo() (info model.Fields) {
+
+    info = model.Fields{}
+
+    info["uuid"] = b.UUID.String()
+    info["x"] = b.X
+    info["y"] = b.Y
+    info["type"] = b.Type
+    info["level"] = b.Level
+
+	return
+}
+

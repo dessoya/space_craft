@@ -89,7 +89,9 @@ func timeWrapper(commandName string, command command.Command, message []byte) {
 
 	command.Execute(message)
 
-	d := time.Now().Sub(t)
+	// d := time.Now().Sub(t)
+	d := time.Since(t)
+	
 	logger.String(fmt.Sprintf("command '%s' time: %0.5f", commandName, float64(d) / float64(time.Second)))
 }
 

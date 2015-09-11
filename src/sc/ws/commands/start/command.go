@@ -90,9 +90,16 @@ func (c *Command) Execute(message []byte) {
 	})
 
 	livePlanet.Update(model2.Fields{
-		"PlayerUUID": player.UUID,
-		"Buildings": []gocql.UUID{ building.UUID },
-	})
+		"PlayerUUID":		player.UUID,
+		"Buildings":		[]gocql.UUID{ building.UUID },
+		"Population":		600,
+		"PopulationSInc":	0,
+		"PopulationUsage":	0,
+		"Crystals":			3000,
+		"CrystalsSInc":		0,
+		"Minerals":			5000,
+		"MineralsSInc":		0,
+})
 
 
 

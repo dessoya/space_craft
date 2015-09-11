@@ -1,10 +1,10 @@
 
-package get_planet
+package build
 
 import (
 	"sc/ws/command"
 	// "sc/ws/connection"
-	"sc/model"
+	"sc/model2"
 
 	// "github.com/gocql/gocql"
 	// "fmt"
@@ -14,6 +14,7 @@ import (
 	model_user "sc/models2/user"
 	model_player "sc/models2/player"
 	model_live_planet "sc/models2/live_planet"
+	// model_building "sc/models2/building"
 
 	// model_live_planet "sc/models/live_planet"
 	// model_building "sc/models/building"
@@ -27,7 +28,10 @@ type Command struct {
 }
 
 type CommandDetector struct {
-	CommandId		int `json:"command_id"`
+	CommandId		int			`json:"command_id"`
+	Building		string		`json:"building"`
+	X				int			`json:"x"`
+	Y				int			`json:"y"`
 }
 
 
@@ -42,7 +46,7 @@ func (c *Command) Execute(message []byte) {
 	var commandDetector CommandDetector
 	json.Unmarshal(message, &commandDetector)
 
-	answer := model.Fields{
+	answer := model2.Fields{
 		"command_id": commandDetector.CommandId,
 	}
 
@@ -53,24 +57,37 @@ func (c *Command) Execute(message []byte) {
 			return
 		}
 
-		// answer["user"] = true
-		
 		player, _ := model_player.Get(*user.PlayerUUID)
-
 		if player == nil {
 			return
 		}
-
-		// answer["player"] = true
 
 		planet, _ := model_live_planet.Get(player.CapitalPlanetUUID)
 		if planet == nil {
 			return
 		}
 
-		// answer["planet"] = true
+		/*
+		building, _ := model_building.Create()
 
-		answer["planet_info"] = planet.MakeClientInfo()
+		building.Update(model2.Fields{
+			"Type": commandDetector.Building,
+			"Level": 1,
+			"TurnOn": true,
+			"X": commandDetector.X,
+			"Y": commandDetector.Y,
+		})
+
+		planet.Update(model2.Fields{
+			"Buildings": append(planet.Buildings, building.UUID),
+		})
+		*/
+
+		c.ctx.BDispatcher.Build(&planet.UUID, 0, int(commandDetector.X), int(commandDetector.Y))
+		
+		answer["status"] = "builded"
+
+		// answer["planet_info"] = planet.MakeClientInfo()
 	}()
 
 

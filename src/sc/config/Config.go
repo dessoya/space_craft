@@ -17,9 +17,14 @@ type ConfigCassandra struct {
 	IP string `json:"ip"`
 }
 
+type ConfigBuildings struct {
+	PoolSize uint16 `json:"pool_size"`
+}
+
 type Config struct {
 	Cassandra ConfigCassandra	`json:"cassandra"`
 	Http ConfigHTTP				`json:"http"`
 	Logger ConfigLogger			`json:"logger"`
 	Auth ConfigAuth				`json:"auth"`
+	Buildings ConfigBuildings	`json:"buildings"`
 }

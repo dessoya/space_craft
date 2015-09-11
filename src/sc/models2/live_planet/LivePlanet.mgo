@@ -9,6 +9,7 @@ import(
 	model "sc/model2"
 	"sc/logger"
 	"sc/errors"
+	model_building "sc/models2/building"
 )
 
 var TableName		= "live_planets"
@@ -17,4 +18,36 @@ var UUIDFieldName	= "planet_uuid"
 type Fields struct {
 	PlayerUUID		gocql.UUID		`cql:"owner_player_uuid"`	
 	Buildings		[]gocql.UUID	`cql:"buildings_list"`	
+
+	Population		float64			`cql:"population"`
+	PopulationSInc	float64			`cql:"population_sinc"`
+	PopulationUsage	float64			`cql:"population_usage"`
+
+	Crystals		float64			`cql:"crystals"`
+	CrystalsSInc	float64			`cql:"crystals_sinc"`
+
+	Minerals		float64			`cql:"minerals"`
+	MineralsSInc	float64			`cql:"minerals_sinc"`
 }
+
+func (lp *Fields) MakeClientInfo() (info model.Fields) {
+
+    info = model.Fields{}
+    var buildings []interface{}
+
+	for _, uuid := range lp.Buildings {
+		b, _ := model_building.Get(uuid)
+		if b != nil {
+			buildings = append(buildings, b.MakeClientInfo())
+		}
+	}
+	
+	info["population"] = lp.Population
+	info["minerals"] = lp.Minerals
+	info["crystals"] = lp.Crystals
+
+	info["buildings"] = buildings
+
+	return
+}
+

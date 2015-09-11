@@ -1,24 +1,16 @@
 
-package get_planet
+package get_planet_buildings_for_construct
 
 import (
 	"sc/ws/command"
-	// "sc/ws/connection"
 	"sc/model"
 
-	// "github.com/gocql/gocql"
-	// "fmt"
-
 	"encoding/json"	
-
+/*
 	model_user "sc/models2/user"
 	model_player "sc/models2/player"
 	model_live_planet "sc/models2/live_planet"
-
-	// model_live_planet "sc/models/live_planet"
-	// model_building "sc/models/building"
-	// "sc/logger"
-
+*/
 )
 
 type Command struct {
@@ -48,6 +40,7 @@ func (c *Command) Execute(message []byte) {
 
 	func () {
 
+		/*
 		user, _ := model_user.Get(session.UserUUID)
 		if user == nil {
 			return
@@ -55,6 +48,8 @@ func (c *Command) Execute(message []byte) {
 
 		// answer["user"] = true
 		
+		// player := user.GetPlayer()
+		// player := model.Get("player", *user.PlayerUUID).(*model_player.Player)
 		player, _ := model_player.Get(*user.PlayerUUID)
 
 		if player == nil {
@@ -71,6 +66,10 @@ func (c *Command) Execute(message []byte) {
 		// answer["planet"] = true
 
 		answer["planet_info"] = planet.MakeClientInfo()
+		*/
+		answer["buildings"] = []string{
+			"energy_station",
+		}
 	}()
 
 

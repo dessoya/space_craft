@@ -26,6 +26,20 @@ type Fields struct {
 	Y				int			`cql:"y"`
 }
 
+
+func (b *Fields) MakeClientInfo() (info model.Fields) {
+
+    info = model.Fields{}
+
+    info["uuid"] = b.UUID.String()
+    info["x"] = b.X
+    info["y"] = b.Y
+    info["type"] = b.Type
+    info["level"] = b.Level
+
+	return
+}
+
 var Field2CQL = map[string]string{
 	"UUID": "building_uuid",
 	"IsLock": "lock",
@@ -229,6 +243,8 @@ func (m *Fields) Update(fields model.Fields) error {
 			pair += fmt.Sprintf("%v", t)
 		case string:
 			pair += "'" + t + "'"
+		case float64:
+			pair += fmt.Sprintf("%v", t)
 		case *gocql.UUID:
 			pair += t.String()
 		case []*gocql.UUID:

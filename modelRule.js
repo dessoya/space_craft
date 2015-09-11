@@ -271,6 +271,16 @@ func (m *Fields) Update(fields model.Fields) error {\n\
 			a += '			}\n'
 			break
 
+		case "float64":
+			// a += '			switch t := value.(type) {\n'
+			a += '			switch t := value.(type) {\n'
+			a += '			case int:\n'
+			a += '			m.' + f.name + ' = float64(t)\n'
+			a += '			default:\n'
+			a += '			m.' + f.name + ' = value.(' + f.type + ')\n'
+			a += '			}\n'
+			break
+
 		default:
 			a += '			m.' + f.name + ' = value.(' + f.type + ')\n'
 		}
@@ -288,6 +298,8 @@ func (m *Fields) Update(fields model.Fields) error {\n\
 			pair += fmt.Sprintf("%v", t)\n\
 		case string:\n\
 			pair += "\'" + t + "\'"\n\
+		case float64:\n\
+			pair += fmt.Sprintf("%v", t)\n\
 		case *gocql.UUID:\n\
 			pair += t.String()\n\
 		case []*gocql.UUID:\n\

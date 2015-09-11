@@ -22,6 +22,9 @@ var defaultConfig = module_config.Config{
 	Auth: module_config.ConfigAuth {
 		Methods: []string{"fake"},
 	},
+	Buildings: module_config.ConfigBuildings {
+		PoolSize: 16,
+	},
 }
 
 func readConfig() (*module_config.Config, *errors.Error) {

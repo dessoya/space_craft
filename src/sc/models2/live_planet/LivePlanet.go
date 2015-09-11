@@ -9,6 +9,7 @@ import(
 	model "sc/model2"
 	"sc/logger"
 	"sc/errors"
+	model_building "sc/models2/building"
 )
 
 var TableName		= "live_planets"
@@ -21,6 +22,35 @@ type Fields struct {
 	LockServerUUID	gocql.UUID		`cql:"lock_server_uuid"`
 	PlayerUUID		gocql.UUID		`cql:"owner_player_uuid"`
 	Buildings		[]gocql.UUID	`cql:"buildings_list"`
+	Population		float64			`cql:"population"`
+	PopulationSInc	float64			`cql:"population_sinc"`
+	PopulationUsage	float64			`cql:"population_usage"`
+	Crystals		float64			`cql:"crystals"`
+	CrystalsSInc	float64			`cql:"crystals_sinc"`
+	Minerals		float64			`cql:"minerals"`
+	MineralsSInc	float64			`cql:"minerals_sinc"`
+}
+
+
+func (lp *Fields) MakeClientInfo() (info model.Fields) {
+
+    info = model.Fields{}
+    var buildings []interface{}
+
+	for _, uuid := range lp.Buildings {
+		b, _ := model_building.Get(uuid)
+		if b != nil {
+			buildings = append(buildings, b.MakeClientInfo())
+		}
+	}
+	
+	info["population"] = lp.Population
+	info["minerals"] = lp.Minerals
+	info["crystals"] = lp.Crystals
+
+	info["buildings"] = buildings
+
+	return
 }
 
 var Field2CQL = map[string]string{
@@ -29,6 +59,13 @@ var Field2CQL = map[string]string{
 	"LockServerUUID": "lock_server_uuid",
 	"PlayerUUID": "owner_player_uuid",
 	"Buildings": "buildings_list",
+	"Population": "population",
+	"PopulationSInc": "population_sinc",
+	"PopulationUsage": "population_usage",
+	"Crystals": "crystals",
+	"CrystalsSInc": "crystals_sinc",
+	"Minerals": "minerals",
+	"MineralsSInc": "minerals_sinc",
 }
 
 var InstallInfo = model.InstallInfo{ Init: Init }
@@ -61,6 +98,13 @@ func (m *Fields) Load() (error) {
 	m.LockServerUUID = row["lock_server_uuid"].(gocql.UUID)
 	m.PlayerUUID = row["owner_player_uuid"].(gocql.UUID)
 	m.Buildings = row["buildings_list"].([]gocql.UUID)
+	m.Population = row["population"].(float64)
+	m.PopulationSInc = row["population_sinc"].(float64)
+	m.PopulationUsage = row["population_usage"].(float64)
+	m.Crystals = row["crystals"].(float64)
+	m.CrystalsSInc = row["crystals_sinc"].(float64)
+	m.Minerals = row["minerals"].(float64)
+	m.MineralsSInc = row["minerals_sinc"].(float64)
 
 	return nil
 }
@@ -198,6 +242,55 @@ func (m *Fields) Update(fields model.Fields) error {
 			}
 		case "Buildings":
 			m.Buildings = value.([]gocql.UUID)
+		case "Population":
+			switch t := value.(type) {
+			case int:
+			m.Population = float64(t)
+			default:
+			m.Population = value.(float64)
+			}
+		case "PopulationSInc":
+			switch t := value.(type) {
+			case int:
+			m.PopulationSInc = float64(t)
+			default:
+			m.PopulationSInc = value.(float64)
+			}
+		case "PopulationUsage":
+			switch t := value.(type) {
+			case int:
+			m.PopulationUsage = float64(t)
+			default:
+			m.PopulationUsage = value.(float64)
+			}
+		case "Crystals":
+			switch t := value.(type) {
+			case int:
+			m.Crystals = float64(t)
+			default:
+			m.Crystals = value.(float64)
+			}
+		case "CrystalsSInc":
+			switch t := value.(type) {
+			case int:
+			m.CrystalsSInc = float64(t)
+			default:
+			m.CrystalsSInc = value.(float64)
+			}
+		case "Minerals":
+			switch t := value.(type) {
+			case int:
+			m.Minerals = float64(t)
+			default:
+			m.Minerals = value.(float64)
+			}
+		case "MineralsSInc":
+			switch t := value.(type) {
+			case int:
+			m.MineralsSInc = float64(t)
+			default:
+			m.MineralsSInc = value.(float64)
+			}
 		}
 		var pair = Field2CQL[key] + "="
 		switch t := value.(type) {
@@ -209,6 +302,8 @@ func (m *Fields) Update(fields model.Fields) error {
 			pair += fmt.Sprintf("%v", t)
 		case string:
 			pair += "'" + t + "'"
+		case float64:
+			pair += fmt.Sprintf("%v", t)
 		case *gocql.UUID:
 			pair += t.String()
 		case []*gocql.UUID:

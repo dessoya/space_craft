@@ -21,6 +21,8 @@ import (
 	"sc/errors"
 	"sc/star"
 
+	"sc/buildings"
+
 	"sc/ws/command"
 	"sc/ws/connection"
 	"sc/ws/connection/factory"
@@ -32,6 +34,8 @@ import (
 	cmd_set_section "sc/ws/commands/set_section"
 	cmd_start "sc/ws/commands/start"
 	cmd_get_planet "sc/ws/commands/get_planet"
+	cmd_get_planet_buildings_for_construct "sc/ws/commands/get_planet_buildings_for_construct"
+	cmd_build  "sc/ws/commands/build"
 
 	cmd_session_lock_state "sc/ws/star_commands/session_lock_state"
 	cmd_user_lock_state "sc/ws/star_commands/get_user_lock_state"
@@ -117,6 +121,8 @@ func main() {
     server.StartUpdater()
     star.SetLocalServer(server)
 
+    bdispatcher := buildings.NewDispatcher(config.Buildings.PoolSize)
+
 
     model2.InstallModels(session,
     	server.UUID,
@@ -135,6 +141,9 @@ func main() {
 	connectionFactory.InstallCommand("set_section", cmd_set_section.Generator)
 	connectionFactory.InstallCommand("start", cmd_start.Generator)	
 	connectionFactory.InstallCommand("get_planet", cmd_get_planet.Generator)	
+	connectionFactory.InstallCommand("get_planet_buildings_for_construct", cmd_get_planet_buildings_for_construct.Generator)
+	connectionFactory.InstallCommand("build", cmd_build.Generator)
+	
 
 
 	// star commands
@@ -142,7 +151,7 @@ func main() {
 	connectionFactory.InstallCommand("get_user_lock_state", cmd_user_lock_state.Generator)
 	connectionFactory.InstallCommand("star_user_logout", cmd_user_logout.Generator)
 
-	commandContext := &command.Context{ Factory: connectionFactory, CQLSession: session, Config: config, ServerUUID: server.UUID }
+	commandContext := &command.Context{ Factory: connectionFactory, CQLSession: session, Config: config, ServerUUID: server.UUID, BDispatcher: bdispatcher }
 
 	star.SetCommands(connectionFactory.GetCommands(), commandContext)
 

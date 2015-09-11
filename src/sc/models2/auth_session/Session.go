@@ -244,6 +244,8 @@ func (m *Fields) Update(fields model.Fields) error {
 			pair += fmt.Sprintf("%v", t)
 		case string:
 			pair += "'" + t + "'"
+		case float64:
+			pair += fmt.Sprintf("%v", t)
 		case *gocql.UUID:
 			pair += t.String()
 		case []*gocql.UUID:
