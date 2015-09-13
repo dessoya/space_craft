@@ -85,12 +85,15 @@ func New(
 }
 
 func timeWrapper(commandName string, command command.Command, message []byte) {
-	t := time.Now()
+
+	t := time.Now().UnixNano()
+	// t := time.Now()
 
 	command.Execute(message)
 
 	// d := time.Now().Sub(t)
-	d := time.Since(t)
+	// d := time.Since(t)
+	d := time.Now().UnixNano() - t
 	
 	logger.String(fmt.Sprintf("command '%s' time: %0.5f", commandName, float64(d) / float64(time.Second)))
 }

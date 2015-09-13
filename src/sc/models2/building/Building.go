@@ -22,6 +22,7 @@ type Fields struct {
 	Type			string		`cql:"type"`
 	Level			int			`cql:"level"`
 	TurnOn			bool		`cql:"turn_on"`
+	TurnOnTime		int64		`cql:"turn_on_time"`
 	X				int			`cql:"x"`
 	Y				int			`cql:"y"`
 }
@@ -32,6 +33,7 @@ func (b *Fields) MakeClientInfo() (info model.Fields) {
     info = model.Fields{}
 
     info["uuid"] = b.UUID.String()
+    info["turn_on"] = b.TurnOn
     info["x"] = b.X
     info["y"] = b.Y
     info["type"] = b.Type
@@ -47,6 +49,7 @@ var Field2CQL = map[string]string{
 	"Type": "type",
 	"Level": "level",
 	"TurnOn": "turn_on",
+	"TurnOnTime": "turn_on_time",
 	"X": "x",
 	"Y": "y",
 }
@@ -82,6 +85,7 @@ func (m *Fields) Load() (error) {
 	m.Type = row["type"].(string)
 	m.Level = row["level"].(int)
 	m.TurnOn = row["turn_on"].(bool)
+	m.TurnOnTime = row["turn_on_time"].(int64)
 	m.X = row["x"].(int)
 	m.Y = row["y"].(int)
 
@@ -111,6 +115,17 @@ func Create() (*Fields, error) {
 
 var mutex sync.RWMutex
 var Models = map[string]*Fields{}
+
+func Access(uuid string) (*Fields) {
+
+    mutex.RLock()
+	m, ok := Models[uuid]
+    mutex.RUnlock()
+    if ok {
+    	return m
+    }
+    return nil
+}
 
 func Get(UUID gocql.UUID) (*Fields, error) {
 
@@ -228,6 +243,13 @@ func (m *Fields) Update(fields model.Fields) error {
 			default:
 			m.TurnOn = value.(bool)
 			}
+		case "TurnOnTime":
+			switch t := value.(type) {
+			case int:
+			m.TurnOnTime = int64(t)
+			default:
+			m.TurnOnTime = value.(int64)
+			}
 		case "X":
 			m.X = value.(int)
 		case "Y":
@@ -244,6 +266,8 @@ func (m *Fields) Update(fields model.Fields) error {
 		case string:
 			pair += "'" + t + "'"
 		case float64:
+			pair += fmt.Sprintf("%v", t)
+		case int64:
 			pair += fmt.Sprintf("%v", t)
 		case *gocql.UUID:
 			pair += t.String()
@@ -276,4 +300,14 @@ func (m *Fields) Update(fields model.Fields) error {
 
 	return nil
 
+}
+
+func GetLockedModels() ([]string) {
+	keys := []string{}
+    mutex.RLock()
+    for key, _ := range Models {
+    	keys = append(keys, key)
+    }
+    mutex.RUnlock()
+	return keys
 }

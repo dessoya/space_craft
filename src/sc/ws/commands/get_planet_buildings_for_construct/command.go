@@ -39,37 +39,16 @@ func (c *Command) Execute(message []byte) {
 	}
 
 	func () {
-
-		/*
-		user, _ := model_user.Get(session.UserUUID)
-		if user == nil {
-			return
-		}
-
-		// answer["user"] = true
 		
-		// player := user.GetPlayer()
-		// player := model.Get("player", *user.PlayerUUID).(*model_player.Player)
-		player, _ := model_player.Get(*user.PlayerUUID)
-
-		if player == nil {
-			return
+		answer["buildings"] = []map[string]interface{}{
+			map[string]interface{}{
+				"type": "energy_station",
+			},
+			map[string]interface{}{
+				"type": "mineral_mine",
+			},
 		}
 
-		// answer["player"] = true
-
-		planet, _ := model_live_planet.Get(player.CapitalPlanetUUID)
-		if planet == nil {
-			return
-		}
-
-		// answer["planet"] = true
-
-		answer["planet_info"] = planet.MakeClientInfo()
-		*/
-		answer["buildings"] = []string{
-			"energy_station",
-		}
 	}()
 
 

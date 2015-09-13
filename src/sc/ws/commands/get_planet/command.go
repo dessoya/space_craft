@@ -68,6 +68,8 @@ func (c *Command) Execute(message []byte) {
 			return
 		}
 
+		planet.Connection = c.connection
+
 		// answer["planet"] = true
 
 		answer["planet_info"] = planet.MakeClientInfo()

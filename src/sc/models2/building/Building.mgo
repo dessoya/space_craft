@@ -15,11 +15,14 @@ var TableName		= "buildings"
 var UUIDFieldName	= "building_uuid"
 
 type Fields struct {
-	Type	string	`cql:"type"`
-	Level	int		`cql:"level"`
-	TurnOn	bool	`cql:"turn_on"`
-	X		int		`cql:"x"`
-	Y		int		`cql:"y"`
+
+	Type		string	`cql:"type"`
+	Level		int		`cql:"level"`
+
+	TurnOn		bool	`cql:"turn_on"`
+	TurnOnTime	int64	`cql:"turn_on_time"`
+	X			int		`cql:"x"`
+	Y			int		`cql:"y"`
 }
 
 func (b *Fields) MakeClientInfo() (info model.Fields) {
@@ -27,6 +30,7 @@ func (b *Fields) MakeClientInfo() (info model.Fields) {
     info = model.Fields{}
 
     info["uuid"] = b.UUID.String()
+    info["turn_on"] = b.TurnOn
     info["x"] = b.X
     info["y"] = b.Y
     info["type"] = b.Type

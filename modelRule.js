@@ -26,8 +26,10 @@ var Field2CQL = map[string]string{\n'
 		var f = c[i]
 		if(!f.tag) continue
 		var nameRE = /"(.+?)"/, ar = nameRE.exec(f.tag)
-		var cqlname = ar[1]
-		a += '	"' + f.name + '": "' + cqlname + '",\n'
+		if(ar) {
+			var cqlname = ar[1]
+			a += '	"' + f.name + '": "' + cqlname + '",\n'
+		}
 	}
 
 	a += '}\n\
@@ -88,6 +90,9 @@ a += '\
 		var f = c[i]
 		if(!f.tag) continue
 		var nameRE = /"(.+?)"/, ar = nameRE.exec(f.tag)
+		if(!ar) {
+			continue
+		}
 		var cqlname = ar[1]
 		/*
 		var p = ''
@@ -137,6 +142,17 @@ func Create() (*Fields, error) {\n\
 \n\
 var mutex sync.RWMutex\n\
 var Models = map[string]*Fields{}\n\
+\n\
+func Access(uuid string) (*Fields) {\n\
+\n\
+    mutex.RLock()\n\
+	m, ok := Models[uuid]\n\
+    mutex.RUnlock()\n\
+    if ok {\n\
+    	return m\n\
+    }\n\
+    return nil\n\
+}\n\
 \n\
 func Get(UUID gocql.UUID) (*Fields, error) {\n\
 \n\
@@ -271,6 +287,16 @@ func (m *Fields) Update(fields model.Fields) error {\n\
 			a += '			}\n'
 			break
 
+		case "int64":
+			// a += '			switch t := value.(type) {\n'
+			a += '			switch t := value.(type) {\n'
+			a += '			case int:\n'
+			a += '			m.' + f.name + ' = int64(t)\n'
+			a += '			default:\n'
+			a += '			m.' + f.name + ' = value.(' + f.type + ')\n'
+			a += '			}\n'
+			break
+
 		case "float64":
 			// a += '			switch t := value.(type) {\n'
 			a += '			switch t := value.(type) {\n'
@@ -299,6 +325,8 @@ func (m *Fields) Update(fields model.Fields) error {\n\
 		case string:\n\
 			pair += "\'" + t + "\'"\n\
 		case float64:\n\
+			pair += fmt.Sprintf("%v", t)\n\
+		case int64:\n\
 			pair += fmt.Sprintf("%v", t)\n\
 		case *gocql.UUID:\n\
 			pair += t.String()\n\
@@ -331,6 +359,16 @@ func (m *Fields) Update(fields model.Fields) error {\n\
 \n\
 	return nil\n\
 \n\
+}\n\
+\n\
+func GetLockedModels() ([]string) {\n\
+	keys := []string{}\n\
+    mutex.RLock()\n\
+    for key, _ := range Models {\n\
+    	keys = append(keys, key)\n\
+    }\n\
+    mutex.RUnlock()\n\
+	return keys\n\
 }\n\
 '
 

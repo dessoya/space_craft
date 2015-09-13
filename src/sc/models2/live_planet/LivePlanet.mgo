@@ -10,24 +10,36 @@ import(
 	"sc/logger"
 	"sc/errors"
 	model_building "sc/models2/building"
+	// "sc/ws/command"
 )
 
 var TableName		= "live_planets"
 var UUIDFieldName	= "planet_uuid"
 
+type Connection interface {
+	Send(string)	
+}
+
 type Fields struct {
-	PlayerUUID		gocql.UUID		`cql:"owner_player_uuid"`	
-	Buildings		[]gocql.UUID	`cql:"buildings_list"`	
+	PlayerUUID		gocql.UUID		`cql:"owner_player_uuid"`
+	Buildings		[]gocql.UUID	`cql:"buildings_list"`
 
 	Population		float64			`cql:"population"`
 	PopulationSInc	float64			`cql:"population_sinc"`
 	PopulationUsage	float64			`cql:"population_usage"`
+	PopulationAvail	float64			`cql:"population_avail"`
 
 	Crystals		float64			`cql:"crystals"`
 	CrystalsSInc	float64			`cql:"crystals_sinc"`
 
 	Minerals		float64			`cql:"minerals"`
 	MineralsSInc	float64			`cql:"minerals_sinc"`
+
+	TreatTime		int64			`cql:"treat_time"`
+
+	Connection		Connection
+	DMutex			sync.Mutex
+
 }
 
 func (lp *Fields) MakeClientInfo() (info model.Fields) {
@@ -49,5 +61,9 @@ func (lp *Fields) MakeClientInfo() (info model.Fields) {
 	info["buildings"] = buildings
 
 	return
+}
+
+func (lp *Fields) GetConnection() (Connection) {
+	return lp.Connection
 }
 

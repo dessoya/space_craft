@@ -9,6 +9,7 @@ import (
 	"github.com/gocql/gocql"
 
 	"fmt"
+	"time"
 
 	"encoding/json"	
 
@@ -85,21 +86,24 @@ func (c *Command) Execute(message []byte) {
 		"Type": "capital",
 		"Level": 1,
 		"TurnOn": true,
+		"TurnOnTime": 0,
 		"X": 0,
 		"Y": 0,
 	})
 
 	livePlanet.Update(model2.Fields{
 		"PlayerUUID":		player.UUID,
+		"TreatTime":		time.Now().UnixNano(),
 		"Buildings":		[]gocql.UUID{ building.UUID },
 		"Population":		600,
 		"PopulationSInc":	0,
 		"PopulationUsage":	0,
+		"PopulationAvail":	600,
 		"Crystals":			3000,
 		"CrystalsSInc":		0,
 		"Minerals":			5000,
 		"MineralsSInc":		0,
-})
+	})
 
 
 

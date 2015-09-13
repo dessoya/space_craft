@@ -140,6 +140,17 @@ func Create() (*Fields, error) {
 var mutex sync.RWMutex
 var Models = map[string]*Fields{}
 
+func Access(uuid string) (*Fields) {
+
+    mutex.RLock()
+	m, ok := Models[uuid]
+    mutex.RUnlock()
+    if ok {
+    	return m
+    }
+    return nil
+}
+
 func Get(UUID gocql.UUID) (*Fields, error) {
 
     var err error
@@ -276,6 +287,8 @@ func (m *Fields) Update(fields model.Fields) error {
 			pair += "'" + t + "'"
 		case float64:
 			pair += fmt.Sprintf("%v", t)
+		case int64:
+			pair += fmt.Sprintf("%v", t)
 		case *gocql.UUID:
 			pair += t.String()
 		case []*gocql.UUID:
@@ -307,4 +320,14 @@ func (m *Fields) Update(fields model.Fields) error {
 
 	return nil
 
+}
+
+func GetLockedModels() ([]string) {
+	keys := []string{}
+    mutex.RLock()
+    for key, _ := range Models {
+    	keys = append(keys, key)
+    }
+    mutex.RUnlock()
+	return keys
 }

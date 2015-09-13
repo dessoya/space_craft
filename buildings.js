@@ -4,6 +4,7 @@ var fs			= require('fs')
   , util		= require('util')
 
 var energy_station = require(__dirname + '\\buildings\\energy_station.js')
+var mineral_mine = require(__dirname + '\\buildings\\mineral_mine.js')
 
 var config = { rate: 1 }
 
@@ -45,6 +46,7 @@ function makeGOstruct(data) {
 var text = 'package buildings\n\n'
 
 text += 'var EnergyStation = ' + makeGOstruct(energy_station.getLevelsInfo(config))
+text += 'var MineralMine = ' + makeGOstruct(mineral_mine.getLevelsInfo(config))
 
 fs.writeFileSync(__dirname + '\\src\\sc\\buildings\\buildings.go', text)
 

@@ -4,7 +4,7 @@ package build
 import (
 	"sc/ws/command"
 	// "sc/ws/connection"
-	"sc/model2"
+	// "sc/model2"
 
 	// "github.com/gocql/gocql"
 	// "fmt"
@@ -46,9 +46,11 @@ func (c *Command) Execute(message []byte) {
 	var commandDetector CommandDetector
 	json.Unmarshal(message, &commandDetector)
 
+	/*
 	answer := model2.Fields{
 		"command_id": commandDetector.CommandId,
 	}
+	*/
 
 	func () {
 
@@ -83,17 +85,16 @@ func (c *Command) Execute(message []byte) {
 		})
 		*/
 
-		c.ctx.BDispatcher.Build(&planet.UUID, 0, int(commandDetector.X), int(commandDetector.Y))
+		c.ctx.BDispatcher.Build(&planet.UUID, commandDetector.Building, int(commandDetector.X), int(commandDetector.Y))
 		
-		answer["status"] = "builded"
+		// answer["status"] = "builded"
 
 		// answer["planet_info"] = planet.MakeClientInfo()
 	}()
 
 
-	b, _ := json.Marshal(answer)
-
-	c.connection.Send(string(b))
+	// b, _ := json.Marshal(answer)
+	// c.connection.Send(string(b))
 }
 
 func Generator(con command.Connection, ctx *command.Context) command.Command {

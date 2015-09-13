@@ -44,7 +44,7 @@ var engine = {
 
 		var info = { type: typeName, start: a.index, fields: [ ] }
 
-		var fieldRE = /([a-zA-Z\d_]+)\s+(\S+)\s+(\S+)|(\})/gm
+		var fieldRE = /([a-zA-Z\d_]+)\s+(\S+)\s*(`\S+`)?|(\})/gm
 		var from = a.index + a[0].length
 		fieldRE.lastIndex = from
 

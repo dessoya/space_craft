@@ -10,10 +10,15 @@ import(
 	"sc/logger"
 	"sc/errors"
 	model_building "sc/models2/building"
+	// "sc/ws/command"
 )
 
 var TableName		= "live_planets"
 var UUIDFieldName	= "planet_uuid"
+
+type Connection interface {
+	Send(string)	
+}
 
 type Fields struct {
 	UUID			gocql.UUID		`cql:"planet_uuid"`
@@ -25,10 +30,14 @@ type Fields struct {
 	Population		float64			`cql:"population"`
 	PopulationSInc	float64			`cql:"population_sinc"`
 	PopulationUsage	float64			`cql:"population_usage"`
+	PopulationAvail	float64			`cql:"population_avail"`
 	Crystals		float64			`cql:"crystals"`
 	CrystalsSInc	float64			`cql:"crystals_sinc"`
 	Minerals		float64			`cql:"minerals"`
 	MineralsSInc	float64			`cql:"minerals_sinc"`
+	TreatTime		int64			`cql:"treat_time"`
+	Connection		Connection
+	DMutex			sync.Mutex
 }
 
 
@@ -53,6 +62,10 @@ func (lp *Fields) MakeClientInfo() (info model.Fields) {
 	return
 }
 
+func (lp *Fields) GetConnection() (Connection) {
+	return lp.Connection
+}
+
 var Field2CQL = map[string]string{
 	"UUID": "planet_uuid",
 	"IsLock": "lock",
@@ -62,10 +75,12 @@ var Field2CQL = map[string]string{
 	"Population": "population",
 	"PopulationSInc": "population_sinc",
 	"PopulationUsage": "population_usage",
+	"PopulationAvail": "population_avail",
 	"Crystals": "crystals",
 	"CrystalsSInc": "crystals_sinc",
 	"Minerals": "minerals",
 	"MineralsSInc": "minerals_sinc",
+	"TreatTime": "treat_time",
 }
 
 var InstallInfo = model.InstallInfo{ Init: Init }
@@ -101,10 +116,12 @@ func (m *Fields) Load() (error) {
 	m.Population = row["population"].(float64)
 	m.PopulationSInc = row["population_sinc"].(float64)
 	m.PopulationUsage = row["population_usage"].(float64)
+	m.PopulationAvail = row["population_avail"].(float64)
 	m.Crystals = row["crystals"].(float64)
 	m.CrystalsSInc = row["crystals_sinc"].(float64)
 	m.Minerals = row["minerals"].(float64)
 	m.MineralsSInc = row["minerals_sinc"].(float64)
+	m.TreatTime = row["treat_time"].(int64)
 
 	return nil
 }
@@ -132,6 +149,17 @@ func Create() (*Fields, error) {
 
 var mutex sync.RWMutex
 var Models = map[string]*Fields{}
+
+func Access(uuid string) (*Fields) {
+
+    mutex.RLock()
+	m, ok := Models[uuid]
+    mutex.RUnlock()
+    if ok {
+    	return m
+    }
+    return nil
+}
 
 func Get(UUID gocql.UUID) (*Fields, error) {
 
@@ -263,6 +291,13 @@ func (m *Fields) Update(fields model.Fields) error {
 			default:
 			m.PopulationUsage = value.(float64)
 			}
+		case "PopulationAvail":
+			switch t := value.(type) {
+			case int:
+			m.PopulationAvail = float64(t)
+			default:
+			m.PopulationAvail = value.(float64)
+			}
 		case "Crystals":
 			switch t := value.(type) {
 			case int:
@@ -291,6 +326,13 @@ func (m *Fields) Update(fields model.Fields) error {
 			default:
 			m.MineralsSInc = value.(float64)
 			}
+		case "TreatTime":
+			switch t := value.(type) {
+			case int:
+			m.TreatTime = int64(t)
+			default:
+			m.TreatTime = value.(int64)
+			}
 		}
 		var pair = Field2CQL[key] + "="
 		switch t := value.(type) {
@@ -303,6 +345,8 @@ func (m *Fields) Update(fields model.Fields) error {
 		case string:
 			pair += "'" + t + "'"
 		case float64:
+			pair += fmt.Sprintf("%v", t)
+		case int64:
 			pair += fmt.Sprintf("%v", t)
 		case *gocql.UUID:
 			pair += t.String()
@@ -335,4 +379,14 @@ func (m *Fields) Update(fields model.Fields) error {
 
 	return nil
 
+}
+
+func GetLockedModels() ([]string) {
+	keys := []string{}
+    mutex.RLock()
+    for key, _ := range Models {
+    	keys = append(keys, key)
+    }
+    mutex.RUnlock()
+	return keys
 }
