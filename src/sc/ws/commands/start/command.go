@@ -103,6 +103,10 @@ func (c *Command) Execute(message []byte) {
 		"CrystalsSInc":		0,
 		"Minerals":			5000,
 		"MineralsSInc":		0,
+		"QueueBuildType":	[]string{},
+		"QueueBuildX":		[]int{},
+		"QueueBuildY":		[]int{},
+
 	})
 
 

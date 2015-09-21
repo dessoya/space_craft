@@ -6,6 +6,7 @@ import(
 	"sync"
 	"fmt"
 	"strings"
+	"strconv"
 	model "sc/model2"
 	"sc/logger"
 	"sc/errors"
@@ -23,6 +24,12 @@ type Fields struct {
 	TurnOnTime	int64	`cql:"turn_on_time"`
 	X			int		`cql:"x"`
 	Y			int		`cql:"y"`
+
+	UpgradeInProgress	bool	`cql:"upgrade_in_progress"`
+	UpgradePopulation	int		`cql:"upgrade_population"`
+	UpgradeElapsed		int		`cql:"upgrade_elapsed"`
+	UpgradeDuration		int		`cql:"upgrade_duration"`
+
 }
 
 func (b *Fields) MakeClientInfo() (info model.Fields) {
@@ -35,6 +42,9 @@ func (b *Fields) MakeClientInfo() (info model.Fields) {
     info["y"] = b.Y
     info["type"] = b.Type
     info["level"] = b.Level
+    info["upgrade_in_progress"] = b.UpgradeInProgress
+    info["upgrade_duration"] = b.UpgradeDuration
+    info["upgrade_elapsed"] = b.UpgradeElapsed
 
 	return
 }

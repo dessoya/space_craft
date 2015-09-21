@@ -342,6 +342,18 @@ func (m *Fields) Update(fields model.Fields) error {\n\
 				a = append(a, uuid.String())\n\
 			}\n\
 			pair += "[" + strings.Join(a, ",") + "]"\n\
+		case []string:\n\
+			a := []string{}\n\
+			for _, s := range t {\n\
+				a = append(a, `\'` + s + `\'`)\n\
+			}\n\
+			pair += "[" + strings.Join(a, ",") + "]"\n\
+		case []int:\n\
+			a := []string{}\n\
+			for _, i := range t {\n\
+				a = append(a, strconv.Itoa(i))\n\
+			}\n\
+			pair += "[" + strings.Join(a, ",") + "]"\n\
 		case gocql.UUID:\n\
 			pair += t.String()\n\
 		default:\n\

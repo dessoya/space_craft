@@ -23,6 +23,7 @@ function getLevelsInfo(config) {
 	var l = info.levelParams[1].level_up
 	info.levelParams[0] = {
 		level_up: {
+			pop: Math.floor(l.pop / 2),
 			minerals: Math.floor(l.minerals / 2),
 			crystals: Math.floor(l.crystals / 2),
 			time: Math.floor(l.time/ 2)

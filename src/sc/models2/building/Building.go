@@ -6,6 +6,7 @@ import(
 	"sync"
 	"fmt"
 	"strings"
+	"strconv"
 	model "sc/model2"
 	"sc/logger"
 	"sc/errors"
@@ -15,16 +16,20 @@ var TableName		= "buildings"
 var UUIDFieldName	= "building_uuid"
 
 type Fields struct {
-	UUID			gocql.UUID	`cql:"building_uuid"`
-	Exists			bool
-	IsLock			bool		`cql:"lock"`
-	LockServerUUID	gocql.UUID	`cql:"lock_server_uuid"`
-	Type			string		`cql:"type"`
-	Level			int			`cql:"level"`
-	TurnOn			bool		`cql:"turn_on"`
-	TurnOnTime		int64		`cql:"turn_on_time"`
-	X				int			`cql:"x"`
-	Y				int			`cql:"y"`
+	UUID				gocql.UUID	`cql:"building_uuid"`
+	Exists				bool
+	IsLock				bool		`cql:"lock"`
+	LockServerUUID		gocql.UUID	`cql:"lock_server_uuid"`
+	Type				string		`cql:"type"`
+	Level				int			`cql:"level"`
+	TurnOn				bool		`cql:"turn_on"`
+	TurnOnTime			int64		`cql:"turn_on_time"`
+	X					int			`cql:"x"`
+	Y					int			`cql:"y"`
+	UpgradeInProgress	bool		`cql:"upgrade_in_progress"`
+	UpgradePopulation	int			`cql:"upgrade_population"`
+	UpgradeElapsed		int			`cql:"upgrade_elapsed"`
+	UpgradeDuration		int			`cql:"upgrade_duration"`
 }
 
 
@@ -38,6 +43,9 @@ func (b *Fields) MakeClientInfo() (info model.Fields) {
     info["y"] = b.Y
     info["type"] = b.Type
     info["level"] = b.Level
+    info["upgrade_in_progress"] = b.UpgradeInProgress
+    info["upgrade_duration"] = b.UpgradeDuration
+    info["upgrade_elapsed"] = b.UpgradeElapsed
 
 	return
 }
@@ -52,6 +60,10 @@ var Field2CQL = map[string]string{
 	"TurnOnTime": "turn_on_time",
 	"X": "x",
 	"Y": "y",
+	"UpgradeInProgress": "upgrade_in_progress",
+	"UpgradePopulation": "upgrade_population",
+	"UpgradeElapsed": "upgrade_elapsed",
+	"UpgradeDuration": "upgrade_duration",
 }
 
 var InstallInfo = model.InstallInfo{ Init: Init }
@@ -88,6 +100,10 @@ func (m *Fields) Load() (error) {
 	m.TurnOnTime = row["turn_on_time"].(int64)
 	m.X = row["x"].(int)
 	m.Y = row["y"].(int)
+	m.UpgradeInProgress = row["upgrade_in_progress"].(bool)
+	m.UpgradePopulation = row["upgrade_population"].(int)
+	m.UpgradeElapsed = row["upgrade_elapsed"].(int)
+	m.UpgradeDuration = row["upgrade_duration"].(int)
 
 	return nil
 }
@@ -254,6 +270,19 @@ func (m *Fields) Update(fields model.Fields) error {
 			m.X = value.(int)
 		case "Y":
 			m.Y = value.(int)
+		case "UpgradeInProgress":
+			switch value.(type) {
+			case nil:
+			m.UpgradeInProgress = false
+			default:
+			m.UpgradeInProgress = value.(bool)
+			}
+		case "UpgradePopulation":
+			m.UpgradePopulation = value.(int)
+		case "UpgradeElapsed":
+			m.UpgradeElapsed = value.(int)
+		case "UpgradeDuration":
+			m.UpgradeDuration = value.(int)
 		}
 		var pair = Field2CQL[key] + "="
 		switch t := value.(type) {
@@ -281,6 +310,18 @@ func (m *Fields) Update(fields model.Fields) error {
 			a := []string{}
 			for _, uuid := range t {
 				a = append(a, uuid.String())
+			}
+			pair += "[" + strings.Join(a, ",") + "]"
+		case []string:
+			a := []string{}
+			for _, s := range t {
+				a = append(a, `'` + s + `'`)
+			}
+			pair += "[" + strings.Join(a, ",") + "]"
+		case []int:
+			a := []string{}
+			for _, i := range t {
+				a = append(a, strconv.Itoa(i))
 			}
 			pair += "[" + strings.Join(a, ",") + "]"
 		case gocql.UUID:

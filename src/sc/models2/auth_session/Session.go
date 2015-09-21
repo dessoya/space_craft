@@ -6,6 +6,7 @@ import(
 	"sync"
 	"fmt"
 	"strings"
+	"strconv"
 	model "sc/model2"
 	"sc/logger"
 	"sc/errors"
@@ -271,6 +272,18 @@ func (m *Fields) Update(fields model.Fields) error {
 			a := []string{}
 			for _, uuid := range t {
 				a = append(a, uuid.String())
+			}
+			pair += "[" + strings.Join(a, ",") + "]"
+		case []string:
+			a := []string{}
+			for _, s := range t {
+				a = append(a, `'` + s + `'`)
+			}
+			pair += "[" + strings.Join(a, ",") + "]"
+		case []int:
+			a := []string{}
+			for _, i := range t {
+				a = append(a, strconv.Itoa(i))
 			}
 			pair += "[" + strings.Join(a, ",") + "]"
 		case gocql.UUID:

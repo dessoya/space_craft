@@ -6,6 +6,7 @@ import (
 	"sc/model"
 
 	"encoding/json"	
+	"sc/buildings"
 /*
 	model_user "sc/models2/user"
 	model_player "sc/models2/player"
@@ -43,9 +44,11 @@ func (c *Command) Execute(message []byte) {
 		answer["buildings"] = []map[string]interface{}{
 			map[string]interface{}{
 				"type": "energy_station",
+				"resources": buildings.GetBuildingLevelInfo("energy_station", 0)["level_up"],
 			},
 			map[string]interface{}{
 				"type": "mineral_mine",
+				"resources": buildings.GetBuildingLevelInfo("mineral_mine", 0)["level_up"],
 			},
 		}
 

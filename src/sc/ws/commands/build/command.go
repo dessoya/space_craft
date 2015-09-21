@@ -69,32 +69,10 @@ func (c *Command) Execute(message []byte) {
 			return
 		}
 
-		/*
-		building, _ := model_building.Create()
-
-		building.Update(model2.Fields{
-			"Type": commandDetector.Building,
-			"Level": 1,
-			"TurnOn": true,
-			"X": commandDetector.X,
-			"Y": commandDetector.Y,
-		})
-
-		planet.Update(model2.Fields{
-			"Buildings": append(planet.Buildings, building.UUID),
-		})
-		*/
-
 		c.ctx.BDispatcher.Build(&planet.UUID, commandDetector.Building, int(commandDetector.X), int(commandDetector.Y))
 		
-		// answer["status"] = "builded"
-
-		// answer["planet_info"] = planet.MakeClientInfo()
 	}()
 
-
-	// b, _ := json.Marshal(answer)
-	// c.connection.Send(string(b))
 }
 
 func Generator(con command.Connection, ctx *command.Context) command.Command {

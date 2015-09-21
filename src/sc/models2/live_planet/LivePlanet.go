@@ -6,6 +6,7 @@ import(
 	"sync"
 	"fmt"
 	"strings"
+	"strconv"
 	model "sc/model2"
 	"sc/logger"
 	"sc/errors"
@@ -36,6 +37,11 @@ type Fields struct {
 	Minerals		float64			`cql:"minerals"`
 	MineralsSInc	float64			`cql:"minerals_sinc"`
 	TreatTime		int64			`cql:"treat_time"`
+	QueueBuildType	[]string		`cql:"queue_build_type"`
+	QueueBuildX		[]int			`cql:"queue_build_x"`
+	QueueBuildY		[]int			`cql:"queue_build_y"`
+	BuildInProgress	[]gocql.UUID	`cql:"build_in_progress"`
+	TurnOnBuildings	[]gocql.UUID	`cql:"turn_on_buildings"`
 	Connection		Connection
 	DMutex			sync.Mutex
 }
@@ -54,6 +60,7 @@ func (lp *Fields) MakeClientInfo() (info model.Fields) {
 	}
 	
 	info["population"] = lp.Population
+	info["population_avail"] = lp.PopulationAvail
 	info["minerals"] = lp.Minerals
 	info["crystals"] = lp.Crystals
 
@@ -81,6 +88,11 @@ var Field2CQL = map[string]string{
 	"Minerals": "minerals",
 	"MineralsSInc": "minerals_sinc",
 	"TreatTime": "treat_time",
+	"QueueBuildType": "queue_build_type",
+	"QueueBuildX": "queue_build_x",
+	"QueueBuildY": "queue_build_y",
+	"BuildInProgress": "build_in_progress",
+	"TurnOnBuildings": "turn_on_buildings",
 }
 
 var InstallInfo = model.InstallInfo{ Init: Init }
@@ -122,6 +134,11 @@ func (m *Fields) Load() (error) {
 	m.Minerals = row["minerals"].(float64)
 	m.MineralsSInc = row["minerals_sinc"].(float64)
 	m.TreatTime = row["treat_time"].(int64)
+	m.QueueBuildType = row["queue_build_type"].([]string)
+	m.QueueBuildX = row["queue_build_x"].([]int)
+	m.QueueBuildY = row["queue_build_y"].([]int)
+	m.BuildInProgress = row["build_in_progress"].([]gocql.UUID)
+	m.TurnOnBuildings = row["turn_on_buildings"].([]gocql.UUID)
 
 	return nil
 }
@@ -333,6 +350,16 @@ func (m *Fields) Update(fields model.Fields) error {
 			default:
 			m.TreatTime = value.(int64)
 			}
+		case "QueueBuildType":
+			m.QueueBuildType = value.([]string)
+		case "QueueBuildX":
+			m.QueueBuildX = value.([]int)
+		case "QueueBuildY":
+			m.QueueBuildY = value.([]int)
+		case "BuildInProgress":
+			m.BuildInProgress = value.([]gocql.UUID)
+		case "TurnOnBuildings":
+			m.TurnOnBuildings = value.([]gocql.UUID)
 		}
 		var pair = Field2CQL[key] + "="
 		switch t := value.(type) {
@@ -360,6 +387,18 @@ func (m *Fields) Update(fields model.Fields) error {
 			a := []string{}
 			for _, uuid := range t {
 				a = append(a, uuid.String())
+			}
+			pair += "[" + strings.Join(a, ",") + "]"
+		case []string:
+			a := []string{}
+			for _, s := range t {
+				a = append(a, `'` + s + `'`)
+			}
+			pair += "[" + strings.Join(a, ",") + "]"
+		case []int:
+			a := []string{}
+			for _, i := range t {
+				a = append(a, strconv.Itoa(i))
 			}
 			pair += "[" + strings.Join(a, ",") + "]"
 		case gocql.UUID:

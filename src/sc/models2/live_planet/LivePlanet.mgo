@@ -6,6 +6,7 @@ import(
 	"sync"
 	"fmt"
 	"strings"
+	"strconv"
 	model "sc/model2"
 	"sc/logger"
 	"sc/errors"
@@ -37,6 +38,14 @@ type Fields struct {
 
 	TreatTime		int64			`cql:"treat_time"`
 
+	QueueBuildType	[]string		`cql:"queue_build_type"`
+	QueueBuildX		[]int			`cql:"queue_build_x"`
+	QueueBuildY		[]int			`cql:"queue_build_y"`
+	BuildInProgress	[]gocql.UUID	`cql:"build_in_progress"`
+
+	TurnOnBuildings	[]gocql.UUID	`cql:"turn_on_buildings"`
+
+
 	Connection		Connection
 	DMutex			sync.Mutex
 
@@ -55,6 +64,7 @@ func (lp *Fields) MakeClientInfo() (info model.Fields) {
 	}
 	
 	info["population"] = lp.Population
+	info["population_avail"] = lp.PopulationAvail
 	info["minerals"] = lp.Minerals
 	info["crystals"] = lp.Crystals
 

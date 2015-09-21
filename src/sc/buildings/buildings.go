@@ -4,6 +4,7 @@ var EnergyStation = map[string]interface{}{
 	"levelParams": []interface{}{
 		map[string]interface{}{
 			"level_up":map[string]interface{}{
+				"pop":2,
 				"minerals":37,
 				"crystals":15,
 				"time":21,
