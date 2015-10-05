@@ -163,8 +163,15 @@ func GetBuildingLevelInfo(btype string, level int) (map[string]interface{}) {
 	return i2
 }
 
-func GetBuildingUsage(levelInfo map[string]interface{}) (float64) {
-	return float64(levelInfo["popUsage"].(int))
+func GetBuildingUsage(levelInfo map[string]interface{}) (float64, float64) {
+	var eu float64
+	energyUsage, ok := levelInfo["energyUsage"]
+	if ok {
+		eu = float64(energyUsage.(int))
+	} else {
+		eu = 0
+	}
+	return float64(levelInfo["popUsage"].(int)), eu
 }
 
 /*
@@ -259,19 +266,9 @@ func (w *Worker) Loop() {
 					conn := planet.GetConnection()
 					if conn != nil {
 
-						conn.Send(fmt.Sprintf(`{"command":"nc_build","planet_uuid":"%s","building":{"uuid":"%s","type":"%s","x":%d,"y":%d,"level":0,"upgrade_in_progress":true,"upgrade_duration":%d,"upgrade_elapsed":0}}`,
-							m.PlanetUUID.String(),
-							building.UUID.String(),
-							btype,
-							x,
-							y,
-							duration))
+						conn.Send(building.NCBuildingUpdate(m.PlanetUUID))
+						conn.Send(planet.NCUpdatePlanetResources())
 
-						conn.Send(fmt.Sprintf(`{"command":"nc_update_planet_resource","planet_uuid":"%s","resources":{"minerals":%d,"crystals":%d,"population_avail":%d}}`,
-							m.PlanetUUID.String(),
-							int(planet.Minerals),
-							int(planet.Crystals),
-							int(planet.PopulationAvail)))
 					}					
 
 				}
@@ -309,14 +306,9 @@ func (w *Worker) Loop() {
 							})
 
 							if conn != nil {
-								conn.Send(fmt.Sprintf(`{"command":"nc_building_upgrade_completed","planet_uuid":"%s","building":{"uuid":"%s","level":%d}}`,
-									m.PlanetUUID.String(),
-									building.UUID.String(),
-									building.Level))
 
-								conn.Send(fmt.Sprintf(`{"command":"nc_update_planet_resource","planet_uuid":"%s","resources":{"population_avail":%d}}`,
-									m.PlanetUUID.String(),
-									int(planet.PopulationAvail)))
+								conn.Send(building.NCBuildingUpdate(m.PlanetUUID))
+								conn.Send(planet.NCUpdatePlanetResources())
 
 							}							
 
@@ -326,11 +318,7 @@ func (w *Worker) Loop() {
 						} else {
 
 							if conn != nil {
-								conn.Send(fmt.Sprintf(`{"command":"nc_update_building_progress","planet_uuid":"%s","building":{"uuid":"%s","upgrade_duration":%d,"upgrade_elapsed":%d}}`,
-									m.PlanetUUID.String(),
-									building.UUID.String(),
-									building.UpgradeDuration,
-									building.UpgradeElapsed))
+								conn.Send(building.NCBuildingUpdate(m.PlanetUUID))
 							}
 
 						}
@@ -347,10 +335,10 @@ func (w *Worker) Loop() {
 						if building.TurnOnTime < att {
 
 							levelInfo := GetBuildingLevelInfo(building.Type, building.Level)
-							popUsage := GetBuildingUsage(levelInfo)
+							popUsage, energyUsage := GetBuildingUsage(levelInfo)
 
 							avail := false
-							if popUsage <= planet.PopulationAvail {
+							if popUsage <= planet.PopulationAvail && energyUsage <= planet.EnergyAvail {
 								avail = true
 							}
 
@@ -364,83 +352,45 @@ func (w *Worker) Loop() {
 								planet.Update(model2.Fields{
 									"TurnOnBuildings": append(planet.TurnOnBuildings[:i], planet.TurnOnBuildings[i+1:]...),
 									"PopulationAvail": planet.PopulationAvail - float64(popUsage),
+									"EnergyAvail": planet.EnergyAvail - float64(energyUsage),
 								})
 
+								// custom building logic
+								Treators[building.Type].TurnOn(building, planet)
+
 								if conn != nil {
-									conn.Send(fmt.Sprintf(`{"command":"nc_building_turnon","planet_uuid":"%s","building_uuid":"%s"}`, m.PlanetUUID.String(), building.UUID.String()))
-
-									conn.Send(fmt.Sprintf(`{"command":"nc_update_planet_resource","planet_uuid":"%s","resources":{"minerals":%d,"crystals":%d,"population_avail":%d}}`,
-										m.PlanetUUID.String(),
-										int(planet.Minerals),
-										int(planet.Crystals),
-										int(planet.PopulationAvail)))
-
+									conn.Send(building.NCBuildingUpdate(m.PlanetUUID))
+									conn.Send(planet.NCUpdatePlanetResources())
 								}
 
 								again = true
 								break
+							} else {
+								// send problem turn on
+
 							}
+
 						}
 
 					}
 				}
 
-				/*
-				for _, buuid := range planet.Buildings {
-					building, _ := model_building.Get(buuid)
-					if building == nil {
-						// todo: err
-						continue
-					}
+				// custom work
 
-					if building.TurnOn == false && building.TurnOnTime > 0 && building.TurnOnTime < att {
+				th := &TreatHint{ UpdateResource: false }
+				for _, UUID := range planet.Buildings {
+					building, _ := model_building.Get(UUID)
+					if building == nil || !building.TurnOn { continue }
 
-						logger.String("turn on building")
-
-						conn := planet.GetConnection()
-
-						// 1. check availability
-						levelInfo := GetBuildingLevelInfo(building.Type, building.Level)
-						popUsage := GetBuildingUsage(levelInfo)
-
-						avail := false
-						if popUsage <= planet.PopulationAvail {
-							avail = true
-						}
-
-						if avail {
-
-							// 2. reduce resource							
-							// 3. turn on
-
-							building.Update(model2.Fields{
-								"PopulationAvail": planet.PopulationAvail - popUsage,
-								"TurnOn": true,
-								"TurnOnTime": 0,
-							})
-
-							// 4. send connection notify
-
-							if conn != nil {
-								conn.Send(fmt.Sprintf(`{"command":"nc_building_turnon","planet_uuid":"%s","building_uuid":"%s"}`, m.PlanetUUID.String(), building.UUID.String()))
-							}
-
-						} else {
-
-							// 5. send connection notify fail turn on
-
-							building.Update(model2.Fields{
-								"TurnOnTime": 0,
-							})
-
-							if conn != nil {
-								conn.Send(fmt.Sprintf(`{"command":"nc_building_turnon_problem","planet_uuid":"%s","building_uuid":"%s"}`, m.PlanetUUID.String(), building.UUID.String()))
-							}
-
-						}
+					t, ok := Treators[building.Type]
+					if ok {
+						t.TreatSecond(building, planet, th)
 					}
 				}
-				*/
+
+				if th.UpdateResource && conn != nil {
+					conn.Send(planet.NCUpdatePlanetResources())
+				}
 
 				planet.Update(model2.Fields{
 					"TreatTime": planet.TreatTime + 1000000000,
@@ -469,46 +419,5 @@ func (w *Worker) MT_BuildProc(planet *model_live_planet.Fields, m *WorkerMessage
 		"QueueBuildX": append(planet.QueueBuildX, m.Params["x"].(int)),
 		"QueueBuildY": append(planet.QueueBuildY, m.Params["y"].(int)),
 	})
-
-	/*
-
-	i1 := EnergyStation["levelParams"].([]interface{})
-	i2 := i1[0].(map[string]interface{})
-	i3 := i2["level_up"]
-	i4 := i3.(map[string]interface{})
-
-	costMinerals := i4["minerals"].(int)
-	costCrystals := i4["crystals"].(int)
-	planet.Update(model2.Fields{
-		"Minerals": planet.Minerals - float64(costMinerals),
-		"Crystals": planet.Crystals - float64(costCrystals),
-	})
-
-	building, _ := model_building.Create()
-
-	building.Update(model2.Fields{
-		"Type":			m.Params["type"],
-		"Level":		1,
-		"TurnOn":		false,
-		"TurnOnTime":	0,
-		"X":			m.Params["x"],
-		"Y":			m.Params["y"],
-	})
-
-	planet.Update(model2.Fields{
-		"Buildings": append(planet.Buildings, building.UUID),
-	})
-
-	*/
-
-	/*
-	conn := planet.GetConnection()
-	if conn != nil {
-		conn.Send(fmt.Sprintf(`{"command":"nc_build","planet_uuid":"%s","building":{"type":"%s","x":%d,"y":%d}}`, m.PlanetUUID.String(), m.Params["type"], m.Params["x"], m.Params["y"]))
-		conn.Send(fmt.Sprintf(`{"command":"nc_update_planet_resource","planet_uuid":"%s","resources":{"minerals":%d,"crystals":%d}}`, m.PlanetUUID.String(), int(planet.Minerals), int(planet.Crystals)))
-	}
-
-	w.D.TurnOn(m.PlanetUUID, &building.UUID)
-	*/
 
 }

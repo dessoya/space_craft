@@ -32,6 +32,8 @@ type Fields struct {
 	PopulationSInc	float64			`cql:"population_sinc"`
 	PopulationUsage	float64			`cql:"population_usage"`
 	PopulationAvail	float64			`cql:"population_avail"`
+	Energy			float64			`cql:"energy"`
+	EnergyAvail		float64			`cql:"energy_avail"`
 	Crystals		float64			`cql:"crystals"`
 	CrystalsSInc	float64			`cql:"crystals_sinc"`
 	Minerals		float64			`cql:"minerals"`
@@ -63,6 +65,8 @@ func (lp *Fields) MakeClientInfo() (info model.Fields) {
 	info["population_avail"] = lp.PopulationAvail
 	info["minerals"] = lp.Minerals
 	info["crystals"] = lp.Crystals
+	info["energy"] = lp.Energy
+	info["energy_avail"] = lp.EnergyAvail
 
 	info["buildings"] = buildings
 
@@ -73,6 +77,15 @@ func (lp *Fields) GetConnection() (Connection) {
 	return lp.Connection
 }
 
+func (lp *Fields) NCUpdatePlanetResources() (string) {
+	return fmt.Sprintf(`{"command":"nc_update_planet_resource","planet_uuid":"%s","resources":{"minerals":%d,"crystals":%d,"population_avail":%d,"energy":%d,"energy_avail":%d}}`,
+		lp.UUID.String(),
+		int(lp.Minerals),
+		int(lp.Crystals),
+		int(lp.PopulationAvail),
+		int(lp.Energy),
+		int(lp.EnergyAvail))
+}
 var Field2CQL = map[string]string{
 	"UUID": "planet_uuid",
 	"IsLock": "lock",
@@ -83,6 +96,8 @@ var Field2CQL = map[string]string{
 	"PopulationSInc": "population_sinc",
 	"PopulationUsage": "population_usage",
 	"PopulationAvail": "population_avail",
+	"Energy": "energy",
+	"EnergyAvail": "energy_avail",
 	"Crystals": "crystals",
 	"CrystalsSInc": "crystals_sinc",
 	"Minerals": "minerals",
@@ -125,14 +140,36 @@ func (m *Fields) Load() (error) {
 	m.LockServerUUID = row["lock_server_uuid"].(gocql.UUID)
 	m.PlayerUUID = row["owner_player_uuid"].(gocql.UUID)
 	m.Buildings = row["buildings_list"].([]gocql.UUID)
-	m.Population = row["population"].(float64)
-	m.PopulationSInc = row["population_sinc"].(float64)
-	m.PopulationUsage = row["population_usage"].(float64)
-	m.PopulationAvail = row["population_avail"].(float64)
-	m.Crystals = row["crystals"].(float64)
-	m.CrystalsSInc = row["crystals_sinc"].(float64)
-	m.Minerals = row["minerals"].(float64)
-	m.MineralsSInc = row["minerals_sinc"].(float64)
+	v6 := row["population"]
+	if v6 == nil { m.Population = 0
+	} else { m.Population = v6.(float64) }
+	v7 := row["population_sinc"]
+	if v7 == nil { m.PopulationSInc = 0
+	} else { m.PopulationSInc = v7.(float64) }
+	v8 := row["population_usage"]
+	if v8 == nil { m.PopulationUsage = 0
+	} else { m.PopulationUsage = v8.(float64) }
+	v9 := row["population_avail"]
+	if v9 == nil { m.PopulationAvail = 0
+	} else { m.PopulationAvail = v9.(float64) }
+	v10 := row["energy"]
+	if v10 == nil { m.Energy = 0
+	} else { m.Energy = v10.(float64) }
+	v11 := row["energy_avail"]
+	if v11 == nil { m.EnergyAvail = 0
+	} else { m.EnergyAvail = v11.(float64) }
+	v12 := row["crystals"]
+	if v12 == nil { m.Crystals = 0
+	} else { m.Crystals = v12.(float64) }
+	v13 := row["crystals_sinc"]
+	if v13 == nil { m.CrystalsSInc = 0
+	} else { m.CrystalsSInc = v13.(float64) }
+	v14 := row["minerals"]
+	if v14 == nil { m.Minerals = 0
+	} else { m.Minerals = v14.(float64) }
+	v15 := row["minerals_sinc"]
+	if v15 == nil { m.MineralsSInc = 0
+	} else { m.MineralsSInc = v15.(float64) }
 	m.TreatTime = row["treat_time"].(int64)
 	m.QueueBuildType = row["queue_build_type"].([]string)
 	m.QueueBuildX = row["queue_build_x"].([]int)
@@ -314,6 +351,20 @@ func (m *Fields) Update(fields model.Fields) error {
 			m.PopulationAvail = float64(t)
 			default:
 			m.PopulationAvail = value.(float64)
+			}
+		case "Energy":
+			switch t := value.(type) {
+			case int:
+			m.Energy = float64(t)
+			default:
+			m.Energy = value.(float64)
+			}
+		case "EnergyAvail":
+			switch t := value.(type) {
+			case int:
+			m.EnergyAvail = float64(t)
+			default:
+			m.EnergyAvail = value.(float64)
 			}
 		case "Crystals":
 			switch t := value.(type) {

@@ -104,11 +104,17 @@ a += '\
 		switch(f.type) {
 		case '*gocql.UUID':
 		    a += '	v' + i + ' := row["' + cqlname + '"].(gocql.UUID)\n'
-		    a += '	logger.String(fmt.Sprintf("' + f.name + ': %+v", v' + i + '))\n'
+		    // a += '	logger.String(fmt.Sprintf("' + f.name + ': %+v", v' + i + '))\n'
 		    a += '	if v' + i + '.String() == "00000000-0000-0000-0000-000000000000" { m.' + f.name + ' = nil\n'
 			a += '	} else { m.' + f.name + ' = &v' + i + '}\n'
+			break
 
-		break
+		case 'float64':
+		    a += '	v' + i + ' := row["' + cqlname + '"]\n'
+		    a += '	if v' + i + ' == nil { m.' + f.name + ' = 0\n'
+			a += '	} else { m.' + f.name + ' = v' + i + '.(float64) }\n'
+			break
+
 		default:
 			a += '	m.' + f.name + ' = row["' + cqlname + '"].(' + f.type + ')\n'
 		}

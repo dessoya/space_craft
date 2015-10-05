@@ -50,6 +50,21 @@ func (b *Fields) MakeClientInfo() (info model.Fields) {
 	return
 }
 
+func (b *Fields) NCBuildingUpdate(uuid *gocql.UUID) (string) {
+
+	return fmt.Sprintf(`{"command":"nc_building_update","planet_uuid":"%s","building":{"uuid":"%s","type":"%s","level":%d,"turn_on":%v,"x":%v,"y":%v,"upgrade_in_progress":%v,"upgrade_duration":%v,"upgrade_elapsed":%v}}`,
+		uuid.String(),
+		b.UUID.String(),
+		b.Type,
+		b.Level,
+		b.TurnOn,
+		b.X,
+		b.Y,
+		b.UpgradeInProgress,
+		b.UpgradeDuration,
+		b.UpgradeElapsed)
+}
+
 var Field2CQL = map[string]string{
 	"UUID": "building_uuid",
 	"IsLock": "lock",

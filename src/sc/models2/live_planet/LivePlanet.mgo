@@ -30,6 +30,9 @@ type Fields struct {
 	PopulationUsage	float64			`cql:"population_usage"`
 	PopulationAvail	float64			`cql:"population_avail"`
 
+	Energy			float64			`cql:"energy"`
+	EnergyAvail		float64			`cql:"energy_avail"`
+
 	Crystals		float64			`cql:"crystals"`
 	CrystalsSInc	float64			`cql:"crystals_sinc"`
 
@@ -67,6 +70,8 @@ func (lp *Fields) MakeClientInfo() (info model.Fields) {
 	info["population_avail"] = lp.PopulationAvail
 	info["minerals"] = lp.Minerals
 	info["crystals"] = lp.Crystals
+	info["energy"] = lp.Energy
+	info["energy_avail"] = lp.EnergyAvail
 
 	info["buildings"] = buildings
 
@@ -77,3 +82,12 @@ func (lp *Fields) GetConnection() (Connection) {
 	return lp.Connection
 }
 
+func (lp *Fields) NCUpdatePlanetResources() (string) {
+	return fmt.Sprintf(`{"command":"nc_update_planet_resource","planet_uuid":"%s","resources":{"minerals":%d,"crystals":%d,"population_avail":%d,"energy":%d,"energy_avail":%d}}`,
+		lp.UUID.String(),
+		int(lp.Minerals),
+		int(lp.Crystals),
+		int(lp.PopulationAvail),
+		int(lp.Energy),
+		int(lp.EnergyAvail))
+}

@@ -110,7 +110,6 @@ func (m *Fields) Load() (error) {
 	m.Name = row["username"].(string)
 	m.SectionName = row["section"].(string)
 	v6 := row["player_uuid"].(gocql.UUID)
-	logger.String(fmt.Sprintf("PlayerUUID: %+v", v6))
 	if v6.String() == "00000000-0000-0000-0000-000000000000" { m.PlayerUUID = nil
 	} else { m.PlayerUUID = &v6}
 

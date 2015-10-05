@@ -99,6 +99,8 @@ func (c *Command) Execute(message []byte) {
 		"PopulationSInc":	0,
 		"PopulationUsage":	0,
 		"PopulationAvail":	600,
+		"Energy":			0,
+		"EnergyAvail":		0,
 		"Crystals":			3000,
 		"CrystalsSInc":		0,
 		"Minerals":			5000,
