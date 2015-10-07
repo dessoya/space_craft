@@ -1,4 +1,6 @@
 local*
 1*
 2*
-
+server
+stdout.log
+stderr.log
