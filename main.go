@@ -2,6 +2,13 @@
 package main
 
 import (
+	"syscall"
+	"os"
+	"github.com/sevlyar/go-daemon"
+	"time"
+
+//	"log"
+
 	"expvar"
 	"runtime"
 
@@ -13,9 +20,8 @@ import (
 
     "fmt"
 	"net/http"
-	"os"
 	"log"
-	// "flag"
+	"flag"
 
 	"sc/logger"
 	"sc/errors"
@@ -54,6 +60,13 @@ import (
 
 )
 
+var (
+	signal = flag.String("s", "", `send signal to the daemon
+		quit — graceful shutdown
+		stop — fast shutdown
+		reload — reloading the configuration file`)
+)
+
 func goroutines() interface{} {
     return runtime.NumGoroutine()
 }
@@ -79,6 +92,8 @@ var config *module_config.Config
 
 func main() {
 
+	log.SetFlags(log.Llongfile)
+
 	expvar.Publish("Goroutines", expvar.Func(goroutines))
 	runtime.GOMAXPROCS(6)	
 
@@ -93,12 +108,47 @@ func main() {
 		os.Exit(0)
 	}	
 
-    // fmt.Printf("%+v\n", *config)
-
     logger.Init(config.Logger.Path)
+
+    if config.Daemonize {
+    
+		flag.Parse()
+		daemon.AddCommand(daemon.StringFlag(signal, "quit"), syscall.SIGQUIT, termHandler)
+		daemon.AddCommand(daemon.StringFlag(signal, "stop"), syscall.SIGTERM, termHandler)
+		daemon.AddCommand(daemon.StringFlag(signal, "reload"), syscall.SIGHUP, reloadHandler)
+
+		cntxt := &daemon.Context{
+			PidFileName: config.PidFilepath,
+			PidFilePerm: 0644,
+			LogFileName: config.Logger.Path + "/stdout.log",
+			LogFilePerm: 0640,
+			WorkDir:     "./",
+			Umask:       027,
+			Args:        []string{"[spacecraft-online]"},
+		}
+
+		if len(daemon.ActiveFlags()) > 0 {
+			d, err := cntxt.Search()
+			if err != nil {
+				log.Fatalln("Unable send signal to the daemon:", err)
+			}
+			daemon.SendCommands(d)
+			return
+		}
+
+
+		d, err := cntxt.Reborn()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		if d != nil {
+			return
+		}
+		defer cntxt.Release()
+
+    }
+
     logger.String(fmt.Sprintf("started"))
-
-
 
 	cluster := gocql.NewCluster(config.Cassandra.IP)
     cluster.Keyspace = "sc_2"
@@ -289,4 +339,44 @@ func main() {
 		// log.Fatal("ListenAndServe: ", err)
 		os.Exit(0)
 	}
+
+	go worker()
+
+	derr := daemon.ServeSignals()
+	if derr != nil {
+		log.Println("Error:", derr)
+	}
+	// log.Println("daemon terminated")
+    logger.String(fmt.Sprintf("daemon terminated"))
+
+}
+
+var (
+	stop = make(chan struct{})
+	done = make(chan struct{})
+)
+
+func worker() {
+	for {
+		time.Sleep(time.Second)
+		if _, ok := <-stop; ok {
+			break
+		}
+	}
+	done <- struct{}{}
+}
+
+func termHandler(sig os.Signal) error {
+    logger.String(fmt.Sprintf("terminating..."))
+	time.Sleep(time.Second)
+	stop <- struct{}{}
+	if sig == syscall.SIGQUIT {
+		<-done
+	}
+	return daemon.ErrStop
+}
+
+func reloadHandler(sig os.Signal) error {
+    logger.String(fmt.Sprintf("configuration reloaded"))
+	return nil
 }

@@ -13,6 +13,7 @@ import (
 )
 
 var defaultConfig = module_config.Config{
+	Daemonize: false,
 	Logger: module_config.ConfigLogger {
 		Path: "",
 	},	

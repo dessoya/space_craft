@@ -22,6 +22,8 @@ type ConfigBuildings struct {
 }
 
 type Config struct {
+    Daemonize bool				`json:"daemonize"`
+    PidFilepath string			`json:"pidfile"`
 	Cassandra ConfigCassandra	`json:"cassandra"`
 	Http ConfigHTTP				`json:"http"`
 	Logger ConfigLogger			`json:"logger"`
